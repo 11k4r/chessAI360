@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="w-full min-h-screen px-4 py-12 max-w-5xl mx-auto">
+    
+    <div class="text-center mb-16">
+        <h1 class="text-4xl font-extrabold text-white mb-4">Metrics Manual</h1>
+        <p class="text-slate-400 max-w-2xl mx-auto">
+            Our analysis engine combines powerful classical engines with custom algorithms to break down your game into understandable concepts. Here is what every metric means.
+        </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+        <div class="glass-panel p-6 rounded-2xl animate-fade-in">
+            <h2 class="text-xl font-bold text-yellow-500 uppercase tracking-widest mb-6 border-b border-white/10 pb-2">
+                <i class="fa-solid fa-chess-rook mr-2"></i> Positional Strategy
+            </h2>
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-white font-bold text-sm mb-1">King Safety</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Evaluates how vulnerable the king is to checks and mating attacks based on pawn cover and enemy piece proximity.</p>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold text-sm mb-1">Pawn Structure</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Analyzes the solidity of your pawn chain, penalizing doubled, isolated, or backward pawns.</p>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold text-sm mb-1">Center Control</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Measures your dominance over the four critical central squares (e4, d4, e5, d5) and adjacent territory.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-panel p-6 rounded-2xl animate-fade-in" style="animation-delay: 0.1s">
+            <h2 class="text-xl font-bold text-blue-400 uppercase tracking-widest mb-6 border-b border-white/10 pb-2">
+                <i class="fa-solid fa-chess-knight mr-2"></i> Piece Coordination
+            </h2>
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-white font-bold text-sm mb-1">Activity</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Quantifies how "active" your pieces are, rewarding pieces placed on forward outposts or open lines.</p>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold text-sm mb-1">Harmony</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">How well your pieces defend each other. High harmony means your army is a cohesive unit; low harmony means loose pieces.</p>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold text-sm mb-1">Mobility</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">The raw number of legal moves available to you. More options generally indicate a more flexible position.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-panel p-6 rounded-2xl animate-fade-in" style="animation-delay: 0.2s">
+            <h2 class="text-xl font-bold text-red-400 uppercase tracking-widest mb-6 border-b border-white/10 pb-2">
+                <i class="fa-solid fa-fire mr-2"></i> Tactical Sharpness
+            </h2>
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-white font-bold text-sm mb-1">Material</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">The raw point value of the pieces on the board (Queen=9, Rook=5, etc.), adjusted for tactical imbalances.</p>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold text-sm mb-1">Threats</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Measures the intensity of immediate tactical dangers, such as hanging pieces or mate threats.</p>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold text-sm mb-1">Aggression</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">How much forward pressure you are exerting. High aggression often leads to tactical complications.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-panel p-6 rounded-2xl animate-fade-in" style="animation-delay: 0.3s">
+            <h2 class="text-xl font-bold text-purple-400 uppercase tracking-widest mb-6 border-b border-white/10 pb-2">
+                <i class="fa-solid fa-map mr-2"></i> Territory & Structure
+            </h2>
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-white font-bold text-sm mb-1">Space</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">The amount of territory you control behind your pawn chains, giving your pieces room to maneuver.</p>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold text-sm mb-1">Squeeze</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Your ability to restrict the opponent's movement. A high squeeze score usually means the opponent is in "zugzwang".</p>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold text-sm mb-1">Integrity</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">A measure of structural health. High integrity means no holes or weak squares in your camp.</p>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold text-sm mb-1">Weakness</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Targetable flaws in the position, such as backward pawns or weak color complexes.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass-panel p-6 rounded-2xl animate-fade-in md:col-span-2" style="animation-delay: 0.4s">
+            <h2 class="text-xl font-bold text-slate-300 uppercase tracking-widest mb-6 border-b border-white/10 pb-2">
+                <i class="fa-solid fa-brain mr-2"></i> Time & Decision Making
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-white font-bold text-sm mb-1">Criticality</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">How "sharp" the position is. In high-criticality positions, there is only one good move, and any mistake leads to immediate loss. Low criticality implies a forgiving position.</p>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold text-sm mb-1">Complexity</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">An estimate of how difficult the position is for a human to calculate, based on the number of branching variations.</p>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold text-sm mb-1">Time Efficiency</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">We analyze your clock usage versus the position's criticality to determine if you are "Thinking Deeply", "Rushing", or in "Time Trouble".</p>
+                </div>
+                <div>
+                    <h3 class="text-white font-bold text-sm mb-1">Move Quality</h3>
+                    <p class="text-slate-400 text-xs leading-relaxed">Direct comparison of your move against the best possible line calculated by the engine, categorized from "Blunder" to "Brilliant".</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="text-center mt-12 animate-fade-in" style="animation-delay: 0.5s">
+        <a href="/" class="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors font-bold uppercase text-xs tracking-wider">
+            <i class="fa-solid fa-arrow-left"></i> Back to Home
+        </a>
+    </div>
+
+</div>
+{% endblock %}
