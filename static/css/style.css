@@ -69,3 +69,52 @@ nav {
 ::-webkit-scrollbar-thumb:hover {
     background: #475569;
 }
+
+
+
+/* --- Pawn Structure Insights Highlights --- */
+.pawn-insight-active {
+    position: relative;
+}
+
+/* Pseudo-element creates the inner highlight without blocking clicks */
+.pawn-insight-active::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none; /* Let clicks pass through to the board */
+    transition: all 0.2s ease-in-out;
+}
+
+/* Hierarchy of Highlights (Good to Bad) */
+.pawn-unstoppable::after { box-shadow: inset 0 0 0 4px #22c55e; background: rgba(34, 197, 94, 0.4); }
+.pawn-protected-passer::after { box-shadow: inset 0 0 0 4px #16a34a; background: rgba(22, 163, 74, 0.3); }
+.pawn-passer::after { box-shadow: inset 0 0 0 4px #4ade80; background: rgba(74, 222, 128, 0.2); }
+.pawn-isolated::after { box-shadow: inset 0 0 0 4px #ef4444; background: rgba(239, 68, 68, 0.3); }
+.pawn-doubled::after { box-shadow: inset 0 0 0 4px #f97316; background: rgba(249, 115, 22, 0.3); }
+.pawn-backward::after { box-shadow: inset 0 0 0 4px #eab308; background: rgba(234, 179, 8, 0.3); }
+/* Blocked Pawns */
+.pawn-ram::after { box-shadow: inset 0 0 0 4px #94a3b8; background: rgba(148, 163, 184, 0.3); } /* Slate */
+.pawn-self-blocked::after { box-shadow: inset 0 0 0 4px #a855f7; background: rgba(168, 85, 247, 0.3); } /* Purple */
+
+
+/* --- King Safety Insights Highlights --- */
+.safety-insight-active {
+    position: relative;
+}
+
+.safety-insight-active::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    pointer-events: none;
+    transition: all 0.2s ease-in-out;
+}
+
+.safety-king-safe::after { box-shadow: inset 0 0 0 4px #22c55e; background: rgba(34, 197, 94, 0.2); }
+.safety-king-danger::after { box-shadow: inset 0 0 0 4px #ef4444; background: rgba(239, 68, 68, 0.4); }
+.safety-shield-intact::after { box-shadow: inset 0 0 0 4px #3b82f6; background: rgba(59, 130, 246, 0.3); } /* Blue */
+.safety-shield-pushed::after { box-shadow: inset 0 0 0 4px #0ea5e9; background: rgba(14, 165, 233, 0.2); } /* Light Blue */
+.safety-zone-danger::after { background: rgba(239, 68, 68, 0.15); border: 1px dashed rgba(239, 68, 68, 0.5); }
