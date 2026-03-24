@@ -53,7 +53,7 @@ function initChessBoard(pgn) {
     board = Chessboard('board', {
         position: 'start',
         draggable: false, 
-        pieceTheme: '/static/images/chesspieces/wikipedia/{piece}.png'
+        pieceTheme: '/static/images/chesspieces/{piece}.png'
     });
 }
 
@@ -378,18 +378,22 @@ function updateExpandedPositionMetrics(metrics) {
     openingEl.innerText = topText;
     openingEl.title = topText; // Adds a hover tooltip in case it gets truncated
 
-    // Dynamically shrink the font if the text is long
-    if (topText.length > 25) {
-        openingEl.classList.remove('text-sm');
-        openingEl.classList.add('text-[11px]');
+    // Dynamically shrink the font based on text length to fit the fixed container
+    openingEl.className = "font-bold text-slate-200 text-center line-clamp-2 leading-tight"; // Base classes
+    
+    if (topText.length > 40) {
+        openingEl.classList.add('text-[9px]'); // Extra small for huge names
+    } else if (topText.length > 22) {
+        openingEl.classList.add('text-[11px]'); // Medium small
     } else {
-        openingEl.classList.add('text-sm');
-        openingEl.classList.remove('text-[11px]');
+        openingEl.classList.add('text-sm'); // Normal size
     }
 
     document.getElementById('pos-exp-phase').innerText = metrics.phase || '-';
 	
 	document.getElementById('pos-exp-criticality').innerText = metrics.criticality !== undefined ? metrics.criticality : '-';
+	
+	document.getElementById('pos-exp-sharpness').innerText = metrics.sharpness !== undefined ? metrics.sharpness : '-';
 
     // 2. Top Lines
     const topLinesBox = document.getElementById('pos-exp-top-lines');
@@ -566,38 +570,39 @@ function clearPawnHighlights() {
 
 function drawPawnHighlights(metrics) {
     clearPawnHighlights();
-    if (!metrics || !metrics.pawn_features) return;
+    if (!metrics || !metrics.ai_features) return;
 
-    const features = metrics.pawn_features;
-    const safety = metrics.safety_features; // NEW: Get safety data
+    const f = metrics.ai_features;
     const boardSquares = {}; 
 
     ['white', 'black'].forEach(color => {
-        const f = features[color];
-        const s = safety ? safety[color] : null; // Safe fallback
-        if (!f) return;
+        // Safe check in case the arrays are empty or undefined
+        const getSquares = (key) => f[key] && f[key][color] ? f[key][color] : [];
 
-        // 1. Board Highlights Priority (Added RAM and Self-Blocked at the top so they have lowest CSS priority)
+        // 1. Board Highlights Priority using the NEW flat structure
         const traitMaps = [
-            { path: f.file_based.ram, class: 'pawn-ram', title: 'Blocked Pawn (Ram)' },
-            { path: f.file_based.self_blocked, class: 'pawn-self-blocked', title: 'Self-Blocked Pawn' },
-            { path: f.file_based.backward, class: 'pawn-backward', title: 'Backward Pawn' },
-            { path: f.file_based.doubled, class: 'pawn-doubled', title: 'Doubled Pawn' },
-            { path: f.file_based.isolated, class: 'pawn-isolated', title: 'Isolated Pawn' },
-            { path: f.passed_pawns.passed_pawn, class: 'pawn-passer', title: 'Passed Pawn' },
-            { path: f.passed_pawns.protected_passer, class: 'pawn-protected-passer', title: 'Protected Passer' },
-            { path: f.passed_pawns.unstoppable_passer, class: 'pawn-unstoppable', title: 'Unstoppable Passer!' },
+            { path: getSquares('ram'), class: 'pawn-ram', title: 'Blocked Pawn (Ram)' },
+            { path: getSquares('self_blocked'), class: 'pawn-self-blocked', title: 'Self-Blocked Pawn' },
+            { path: getSquares('backward'), class: 'pawn-backward', title: 'Backward Pawn' },
+            { path: getSquares('doubled'), class: 'pawn-doubled', title: 'Doubled Pawn' },
+            { path: getSquares('isolated'), class: 'pawn-isolated', title: 'Isolated Pawn' },
+            { path: getSquares('passed_pawn'), class: 'pawn-passer', title: 'Passed Pawn' },
+            { path: getSquares('protected_passer'), class: 'pawn-protected-passer', title: 'Protected Passer' },
+            { path: getSquares('unstoppable_passer'), class: 'pawn-unstoppable', title: 'Unstoppable Passer!' },
         ];
 
         traitMaps.forEach(trait => {
             if (trait.path && Array.isArray(trait.path)) {
                 trait.path.forEach(sq => {
-                    if (!boardSquares[sq]) {
-                        boardSquares[sq] = { classes: trait.class, titles: [trait.title] };
-                    } else {
-                        boardSquares[sq].classes = trait.class; // Overwrite class
-                        if (!boardSquares[sq].titles.includes(trait.title)) {
-                            boardSquares[sq].titles.push(trait.title); 
+                    // Filter out pawn structure notations like 'ab' and ensure it's a valid square like 'a2'
+                    if (sq.length === 2) {
+                        if (!boardSquares[sq]) {
+                            boardSquares[sq] = { classes: trait.class, titles: [trait.title] };
+                        } else {
+                            boardSquares[sq].classes = trait.class; 
+                            if (!boardSquares[sq].titles.includes(trait.title)) {
+                                boardSquares[sq].titles.push(trait.title); 
+                            }
                         }
                     }
                 });
@@ -605,34 +610,29 @@ function drawPawnHighlights(metrics) {
         });
 
         // 2. Update Overlay Panel Text
-        const colorPrefix = color.charAt(0); // 'w' or 'b'
+        const colorPrefix = color.charAt(0); 
         
-        // Islands & Majorities (Unchanged)
-        const islands = f.complex_structural.pawn_island_shapes;
+        const islands = getSquares('pawn_island_shapes');
         document.getElementById(`pawn-insights-${colorPrefix}-islands`).innerText = `${islands.length} (${islands.join(', ')})`;
         
-        const majs = [];
-        if(f.wing_distribution_and_majorities.majority.kingside) majs.push("Kingside");
-        if(f.wing_distribution_and_majorities.majority.queenside) majs.push("Queenside");
-        if(f.wing_distribution_and_majorities.majority.central) majs.push("Central");
+        // Majorities are returning empty arrays in your example dict, so we handle it gracefully
+        const majs = getSquares('majority');
         document.getElementById(`pawn-insights-${colorPrefix}-majority`).innerText = majs.length > 0 ? majs.join(', ') : 'None';
 
-        // NEW: Shelter Count
-        const shelterCount = s ? s.environment.shelter_count : 0;
+        const shelterCount = f['shelter_count'] && f['shelter_count'][color] !== undefined ? f['shelter_count'][color] : 0;
         document.getElementById(`pawn-insights-${colorPrefix}-shelter`).innerText = shelterCount;
 
-        // NEW: Blocked Count (Total RAM + Self-Blocked)
-        const blockedCount = f.file_based.ram.length + f.file_based.self_blocked.length;
+        const blockedCount = getSquares('ram').length + getSquares('self_blocked').length;
         document.getElementById(`pawn-insights-${colorPrefix}-blocked`).innerText = blockedCount;
 
-        // Score (Unchanged)
+        // Score 
         const score = metrics.pawn_structure[color] || 0;
         const scoreEl = document.getElementById(`pawn-insights-${colorPrefix}-score`);
         scoreEl.innerText = `${score > 0 ? '+' : ''}${score}`;
         scoreEl.className = `text-sm font-bold mb-2 ${score > 0 ? 'text-green-400' : (score < 0 ? 'text-red-400' : 'text-slate-400')}`;
     });
 
-    // 3. Inject CSS classes and Titles into chessboard.js DOM
+    // 3. Inject CSS classes
     Object.keys(boardSquares).forEach(sq => {
         const data = boardSquares[sq];
         const el = document.querySelector(`.square-${sq}`);
@@ -714,25 +714,29 @@ function clearSafetyHighlights() {
 
 function drawSafetyHighlights(metrics) {
     clearSafetyHighlights();
-    if (!metrics || !metrics.safety_features) return;
+    if (!metrics || !metrics.ai_features) return;
 
-    const features = metrics.safety_features;
+    const f = metrics.ai_features;
     const boardSquares = {}; 
 
     ['white', 'black'].forEach(color => {
-        const f = features[color];
-        if (!f || !f.king_sq) return;
+        const kingSq = f['king_sq'] && f['king_sq'][color] ? f['king_sq'][color] : null;
+        if (!kingSq) return;
+
+        const getSquares = (key) => f[key] && f[key][color] ? f[key][color] : [];
+        const getVal = (key, fallback) => f[key] !== undefined && f[key][color] !== undefined ? f[key][color] : fallback;
 
         // 1. Determine overall danger
-        const inDanger = f.zone_pressure.attackers_count > 0 || f.environment.open_file;
-        const kingClass = inDanger ? 'safety-king-danger' : 'safety-king-safe';
+        const attackers = getVal('attackers_count', 0);
+        const isOpen = getVal('open_file', false);
+        const inDanger = attackers > 0 || isOpen;
         
-        // Add King
-        boardSquares[f.king_sq] = { classes: kingClass, titles: [`${color === 'white' ? 'White' : 'Black'} King`] };
+        const kingClass = inDanger ? 'safety-king-danger' : 'safety-king-safe';
+        boardSquares[kingSq] = { classes: kingClass, titles: [`${color === 'white' ? 'White' : 'Black'} King`] };
 
-        // Add Zone Squares (Faint red boundary if under attack)
-        if (f.zone_pressure.attackers_count > 0) {
-            f.zone_pressure.zone_squares.forEach(sq => {
+        // Add Zone Squares 
+        if (attackers > 0) {
+            getSquares('zone_squares').forEach(sq => {
                 if (!boardSquares[sq]) {
                     boardSquares[sq] = { classes: 'safety-zone-danger', titles: ['Danger Zone'] };
                 }
@@ -740,34 +744,33 @@ function drawSafetyHighlights(metrics) {
         }
 
         // Add Shields
-        f.pawn_shield.rank_2.forEach(sq => {
+        getSquares('shield_rank_2').forEach(sq => {
             if (!boardSquares[sq]) boardSquares[sq] = { classes: 'safety-shield-intact', titles: ['Intact Shield'] };
         });
-        f.pawn_shield.rank_3.forEach(sq => {
+        getSquares('shield_rank_3').forEach(sq => {
             if (!boardSquares[sq]) boardSquares[sq] = { classes: 'safety-shield-pushed', titles: ['Weakened Shield'] };
         });
 
         // 2. Update Overlay Panel Text
         const colorPrefix = color.charAt(0);
         
-        // File Status
         let fileStatus = "Closed";
-        if (f.environment.open_file) fileStatus = "Open (Danger!)";
-        else if (f.environment.semi_open_file) fileStatus = "Semi-Open";
+        if (isOpen) fileStatus = "Open (Danger!)";
+        else if (getVal('semi_open_file', false)) fileStatus = "Semi-Open";
         
         const fileEl = document.getElementById(`safety-insights-${colorPrefix}-file`);
         fileEl.innerText = fileStatus;
-        fileEl.className = f.environment.open_file ? 'text-red-400 font-mono font-bold' : (f.environment.semi_open_file ? 'text-yellow-400 font-mono' : 'text-white font-mono');
+        fileEl.className = isOpen ? 'text-red-400 font-mono font-bold' : (getVal('semi_open_file', false) ? 'text-yellow-400 font-mono' : 'text-white font-mono');
 
-        // Shield Status
         let shieldStatus = "Missing";
-        if (f.pawn_shield.rank_2.length >= 2) shieldStatus = "Intact";
-        else if (f.pawn_shield.rank_2.length + f.pawn_shield.rank_3.length >= 2) shieldStatus = "Pushed / Weakened";
+        const rank2Count = getSquares('shield_rank_2').length;
+        const rank3Count = getSquares('shield_rank_3').length;
+        if (rank2Count >= 2) shieldStatus = "Intact";
+        else if (rank2Count + rank3Count >= 2) shieldStatus = "Pushed / Weakened";
+        
         document.getElementById(`safety-insights-${colorPrefix}-shield`).innerText = shieldStatus;
-
-        // Attackers & Shelter
-        document.getElementById(`safety-insights-${colorPrefix}-attackers`).innerText = f.zone_pressure.attackers_count;
-        document.getElementById(`safety-insights-${colorPrefix}-shelter`).innerText = f.environment.shelter_count;
+        document.getElementById(`safety-insights-${colorPrefix}-attackers`).innerText = attackers;
+        document.getElementById(`safety-insights-${colorPrefix}-shelter`).innerText = getVal('shelter_count', 0);
 
         // Score
         const score = metrics.king_safety[color] || 0;
@@ -782,11 +785,8 @@ function drawSafetyHighlights(metrics) {
         const el = document.querySelector(`.square-${sq}`);
         if (el) {
             el.classList.add('safety-insight-active', data.classes);
-            if (!el.title) {
-                el.title = data.titles.join(' + ');
-            } else {
-                el.title += ' + ' + data.titles.join(' + ');
-            }
+            if (!el.title) el.title = data.titles.join(' + ');
+            else el.title += ' + ' + data.titles.join(' + ');
         }
     });
 }

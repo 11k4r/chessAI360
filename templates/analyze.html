@@ -8,19 +8,19 @@
     
     <div id="main-header" class="text-center mb-12">
         <h1 class="text-4xl font-extrabold text-white mb-4">Analyze Your Games</h1>
-        <p class="text-slate-400">Import your history directly from Chess.com</p>
+        <p class="text-slate-400">Import your history directly</p>
     </div>
 
     <div id="import-view" class="glass-panel p-8 rounded-2xl max-w-lg mx-auto mt-20 transition-all duration-300">
         
         <div class="flex gap-4 mb-8 border-b border-white/10 pb-4">
-            <button class="flex-1 pb-2 text-yellow-500 border-b-2 border-yellow-500 font-bold text-sm uppercase tracking-wider">
-                <i class="fa-solid fa-chess-pawn mr-2"></i> Chess.com
-            </button>
-            <button class="flex-1 pb-2 text-slate-600 font-bold text-sm uppercase tracking-wider cursor-not-allowed" title="Coming Soon">
-                <i class="fa-solid fa-horse-head mr-2"></i> Lichess
-            </button>
-        </div>
+			<button id="btn-chesscom" onclick="setPlatform('chesscom')" class="flex-1 pb-2 text-yellow-500 border-b-2 border-yellow-500 font-bold text-sm uppercase tracking-wider transition-all">
+				<i class="fa-solid fa-chess-pawn mr-2"></i> Chess.com
+			</button>
+			<button id="btn-lichess" onclick="setPlatform('lichess')" class="flex-1 pb-2 text-slate-600 font-bold text-sm uppercase tracking-wider hover:text-slate-400 transition-all">
+				<i class="fa-solid fa-horse-head mr-2"></i> Lichess
+			</button>
+		</div>
 
         <div class="space-y-6">
             <div>
@@ -81,9 +81,9 @@
 	<div id="dashboard-view" class="hidden animate-fade-in h-[85vh] w-full max-w-[1800px] mx-auto">
     
         <div class="flex items-center justify-between mb-4 h-[5%]">
-            <button onclick="resetView()" class="text-slate-400 hover:text-white font-bold uppercase text-xs tracking-wider transition-colors">
-                <i class="fa-solid fa-arrow-left mr-2"></i> Back to Games
-            </button>
+            <button onclick="backToGamesList()" class="text-slate-400 hover:text-white font-bold uppercase text-xs tracking-wider transition-colors">
+				<i class="fa-solid fa-arrow-left mr-2"></i> Back to Games
+			</button>
             <h2 class="text-xl font-bold text-white">Analysis Board</h2>
         </div>
     
@@ -113,102 +113,293 @@
                     <div id="loader-text" class="text-white font-bold text-xl tracking-widest uppercase animate-pulse">Initializing...</div>
                     <div class="mt-2 text-slate-500 text-xs font-mono">Please wait...</div>
                 </div>
+			<div id="analysis-content" class="flex flex-col h-full min-h-0 w-full opacity-0 transition-opacity duration-700 p-2 gap-4">
 
-                <div id="analysis-content" class="flex flex-col h-full min-h-0 opacity-0 transition-opacity duration-700">
-                    
-                    <div class="w-full h-32 mb-6 relative border-2 border-black rounded-md overflow-hidden flex-none">
-                        <canvas id="evalGraph"></canvas>
-                    </div>
-
-                    <div class="flex-none mb-4 space-y-3">
-                        
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-4">
-                                <span id="move-display" class="text-3xl font-bold text-white">...</span>
-                                <div id="move-badge" class="px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider border border-emerald-500/30 shadow-[0_0_10px_rgba(52,211,153,0.2)]">
-                                    Best Move
-                                </div>
-                            </div>
-                            <div id="clock-display" class="text-slate-400 font-mono text-sm font-bold">
-                                <i class="fa-regular fa-clock mr-2"></i>-
-                            </div>
-                        </div>
-
-                        <div class="flex justify-between items-center bg-white/5 p-1.5 rounded-lg border border-white/5">
-                            <div class="flex gap-2">
-                                <button id="btn-mode-abs" onclick="setViewMode('absolute')" class="px-4 py-1.5 rounded bg-slate-700 text-white text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all hover:bg-slate-600">Absolute</button>
-                                <button id="btn-mode-rel" onclick="setViewMode('relative')" class="px-4 py-1.5 rounded text-slate-500 hover:text-white hover:bg-white/5 text-[10px] font-bold uppercase tracking-wider transition-all">Relative</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex-1 min-h-0 grid grid-cols-2 gap-4 mb-4">
-    
-						<div class="bg-black/20 rounded-xl p-3 border border-white/5 flex flex-col justify-start shadow-inner">
-							<h3 class="text-xs font-bold text-yellow-500 uppercase tracking-widest mb-3 opacity-90 border-b border-white/5 pb-1 text-center">Positional Strategy</h3>
-							<div class="space-y-3 flex-1 flex flex-col justify-center" id="group-positional"></div>
+				<div id="move-stats-row" class="glass-panel p-3 rounded-xl border border-white/10 flex-none shadow-lg flex gap-2 h-20">
+					<div class="flex-1 bg-black/30 rounded-lg p-2 text-center border border-white/5 flex flex-col justify-center overflow-hidden">
+						<div class="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Move</div>
+						<div id="stat-move" class="text-sm font-bold text-white truncate w-full">-</div>
+					</div>
+					<div class="flex-1 bg-black/30 rounded-lg p-2 text-center border border-white/5 group relative cursor-help flex flex-col justify-center overflow-hidden">
+						<div class="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Move Quality</div>
+						<div id="stat-class" class="text-sm font-bold text-white truncate w-full">-</div>
+						<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-slate-800 text-xs text-white px-2 py-1 rounded border border-slate-600 shadow-xl whitespace-nowrap z-10">
+							Accuracy: <span id="stat-accuracy">0%</span>
 						</div>
+					</div>
+					<div class="flex-1 bg-black/30 rounded-lg p-2 text-center border border-white/5 flex flex-col justify-center overflow-hidden">
+						<div class="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Time</div>
+						<div id="stat-time" class="text-sm font-bold text-white truncate w-full">-</div>
+					</div>
+					<div class="flex-1 bg-black/30 rounded-lg p-2 text-center border border-white/5 flex flex-col justify-center overflow-hidden">
+						<div class="text-[9px] uppercase tracking-widest text-slate-500 font-bold mb-1">Time Managament</div>
+						<div id="stat-time-class" class="text-sm font-bold text-white truncate w-full">-</div>
+					</div>
+				</div>
 
-						<div class="bg-black/20 rounded-xl p-3 border border-white/5 flex flex-col justify-start shadow-inner">
-							<h3 class="text-xs font-bold text-blue-400 uppercase tracking-widest mb-3 opacity-90 border-b border-white/5 pb-1 text-center">Piece Coordination</h3>
-							<div class="space-y-3 flex-1 flex flex-col justify-center" id="group-coordination"></div>
+				<div class="glass-panel p-5 rounded-xl border border-white/10 flex-none shadow-lg">
+					<h3 class="text-slate-500 uppercase tracking-widest text-xs font-bold mb-3 flex items-center">
+						<i class="fa-solid fa-robot mr-2 text-yellow-500"></i> AI Analysis
+					</h3>
+					<div id="ai-description-box" class="text-slate-200 text-sm leading-relaxed h-16 overflow-y-auto custom-scrollbar font-medium">
+						Waiting for AI generation...
+					</div>
+				</div>
+
+				<div id="unified-analysis-panel" class="w-full h-full glass-panel p-4 rounded-xl border border-white/10 shadow-lg flex flex-col bg-black/20 animate-fade-in">
+					
+					<div class="flex justify-start items-center mb-4 flex-none border-b border-white/10 pb-2 gap-6">
+						<button id="tab-btn-position" onclick="switchAnalysisTab('position', true)" class="text-yellow-500 uppercase tracking-widest text-sm font-bold border-b-2 border-yellow-500 pb-1 transition-colors">
+							Position Analysis
+						</button>
+						<button id="tab-btn-game" onclick="switchAnalysisTab('game', true)" class="text-slate-500 hover:text-slate-300 uppercase tracking-widest text-sm font-bold border-b-2 border-transparent pb-1 transition-colors">
+							Game Analysis
+						</button>
+					</div>
+
+					<div id="expanded-position" class="flex-1 overflow-hidden flex flex-col">
+						<div id="position-analysis-expanded" class="flex-1 overflow-y-auto custom-scrollbar pr-2">
+							<div class="grid grid-cols-3 gap-8 h-full">
+								<div class="flex flex-col gap-4 border-r border-white/5 pr-6 h-full">
+									<div class="flex flex-col justify-between flex-none h-[160px] mb-2">
+										<div class="h-12 flex flex-col justify-center">
+											<div id="pos-exp-top-label" class="text-[10px] uppercase tracking-widest text-slate-500 font-bold text-center mb-0.5">Opening</div>
+											<div id="pos-exp-opening" class="font-bold text-slate-200 text-center line-clamp-2 leading-tight" title="">-</div>
+										</div>
+										
+										<div>
+											<div class="text-[10px] uppercase tracking-widest text-slate-500 font-bold text-center mb-0.5">Phase</div>
+											<div id="pos-exp-phase" class="text-sm font-bold text-slate-200 text-center">-</div>
+										</div>
+										
+										<div>
+											<div class="text-[10px] uppercase tracking-widest text-slate-500 font-bold text-center mb-0.5">Criticality</div>
+											<div id="pos-exp-criticality" class="text-sm font-bold text-slate-200 text-center">-</div>
+										</div>
+										
+										<div>
+											<div class="text-[10px] uppercase tracking-widest text-slate-500 font-bold text-center mb-0.5">Sharpness</div>
+											<div id="pos-exp-sharpness" class="text-sm font-bold text-slate-200 text-center">-</div>
+										</div>
+									</div>
+									
+									<div class="flex-1 flex flex-col min-h-0 h-full pb-2">
+										<div class="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-2 text-center flex-none">Top Lines</div>
+										<div id="pos-exp-top-lines" class="w-full h-full min-h-0 bg-black/40 border border-slate-700/50 rounded-lg p-3 flex flex-col justify-center items-center text-slate-600 text-xs font-mono shadow-inner overflow-y-auto custom-scrollbar">
+											[ Top Lines Placeholder ]
+										</div>
+									</div>
+								</div>
+
+								<div class="flex flex-col justify-around border-r border-white/5 pr-6 py-2">
+									<div>
+										<div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 text-center">Material</div>
+										<div class="flex h-3.5 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-600 shadow-inner">
+											<div id="bar-material-white" class="bg-slate-200 h-full transition-all duration-500 hover:bg-white cursor-help" style="width: 50%;" title="White: 0.0"></div>
+											<div id="bar-material-black" class="bg-slate-950 h-full transition-all duration-500 hover:bg-black cursor-help border-l border-slate-700" style="width: 50%;" title="Black: 0.0"></div>
+										</div>
+									</div>
+									<div class="cursor-pointer group" onclick="togglePawnInsights()" title="Click to toggle board insights">
+										<div class="text-[10px] font-bold text-slate-400 group-hover:text-yellow-500 transition-colors uppercase tracking-wider mb-1.5 text-center flex items-center justify-center gap-1">Pawn Structure</div>
+										<div class="flex h-3.5 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-600 shadow-inner">
+											<div id="bar-structure-white" class="bg-slate-200 h-full transition-all duration-500 hover:bg-white" style="width: 50%;"></div>
+											<div id="bar-structure-black" class="bg-slate-950 h-full transition-all duration-500 hover:bg-black border-l border-slate-700" style="width: 50%;"></div>
+										</div>
+									</div>
+									<div class="cursor-pointer group" onclick="toggleSafetyInsights()" title="Click to toggle King Safety insights">
+										<div class="text-[10px] font-bold text-slate-400 group-hover:text-yellow-500 transition-colors uppercase tracking-wider mb-1.5 text-center">King Safety</div>
+										<div class="flex h-3.5 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-600 shadow-inner">
+											<div id="bar-safety-white" class="bg-slate-200 h-full transition-all duration-500 hover:bg-white cursor-help" style="width: 50%;" title="White: 0.0"></div>
+											<div id="bar-safety-black" class="bg-slate-950 h-full transition-all duration-500 hover:bg-black cursor-help border-l border-slate-700" style="width: 50%;" title="Black: 0.0"></div>
+										</div>
+									</div>
+									<div>
+										<div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 text-center">Center Control</div>
+										<div class="flex h-3.5 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-600 shadow-inner">
+											<div id="bar-center-white" class="bg-slate-200 h-full transition-all duration-500 hover:bg-white cursor-help" style="width: 50%;" title="White: 0.0"></div>
+											<div id="bar-center-black" class="bg-slate-950 h-full transition-all duration-500 hover:bg-black cursor-help border-l border-slate-700" style="width: 50%;" title="Black: 0.0"></div>
+										</div>
+									</div>
+									<div>
+										<div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 text-center">Activity</div>
+										<div class="flex h-3.5 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-600 shadow-inner">
+											<div id="bar-activity-white" class="bg-slate-200 h-full transition-all duration-500 hover:bg-white cursor-help" style="width: 50%;" title="White: 0.0"></div>
+											<div id="bar-activity-black" class="bg-slate-950 h-full transition-all duration-500 hover:bg-black cursor-help border-l border-slate-700" style="width: 50%;" title="Black: 0.0"></div>
+										</div>
+									</div>
+								</div>
+
+								<div class="flex flex-col justify-around py-2">
+									<div>
+										<div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 text-center">Mobility</div>
+										<div class="flex h-3.5 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-600 shadow-inner">
+											<div id="bar-mobility-white" class="bg-slate-200 h-full transition-all duration-500 hover:bg-white cursor-help" style="width: 50%;" title="White: 0.0"></div>
+											<div id="bar-mobility-black" class="bg-slate-950 h-full transition-all duration-500 hover:bg-black cursor-help border-l border-slate-700" style="width: 50%;" title="Black: 0.0"></div>
+										</div>
+									</div>
+									<div>
+										<div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 text-center">Space</div>
+										<div class="flex h-3.5 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-600 shadow-inner">
+											<div id="bar-space-white" class="bg-slate-200 h-full transition-all duration-500 hover:bg-white cursor-help" style="width: 50%;" title="White: 0.0"></div>
+											<div id="bar-space-black" class="bg-slate-950 h-full transition-all duration-500 hover:bg-black cursor-help border-l border-slate-700" style="width: 50%;" title="Black: 0.0"></div>
+										</div>
+									</div>
+									<div>
+										<div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 text-center">Harmony</div>
+										<div class="flex h-3.5 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-600 shadow-inner">
+											<div id="bar-harmony-white" class="bg-slate-200 h-full transition-all duration-500 hover:bg-white cursor-help" style="width: 50%;" title="White: 0.0"></div>
+											<div id="bar-harmony-black" class="bg-slate-950 h-full transition-all duration-500 hover:bg-black cursor-help border-l border-slate-700" style="width: 50%;" title="Black: 0.0"></div>
+										</div>
+									</div>
+									<div>
+										<div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 text-center">Attack</div>
+										<div class="flex h-3.5 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-600 shadow-inner">
+											<div id="bar-attack-white" class="bg-slate-200 h-full transition-all duration-500 hover:bg-white cursor-help" style="width: 50%;" title="White: 0.0"></div>
+											<div id="bar-attack-black" class="bg-slate-950 h-full transition-all duration-500 hover:bg-black cursor-help border-l border-slate-700" style="width: 50%;" title="Black: 0.0"></div>
+										</div>
+									</div>
+									<div>
+										<div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 text-center">Defence</div>
+										<div class="flex h-3.5 w-full bg-slate-800 rounded-full overflow-hidden border border-slate-600 shadow-inner">
+											<div id="bar-defence-white" class="bg-slate-200 h-full transition-all duration-500 hover:bg-white cursor-help" style="width: 50%;" title="White: 0.0"></div>
+											<div id="bar-defence-black" class="bg-slate-950 h-full transition-all duration-500 hover:bg-black cursor-help border-l border-slate-700" style="width: 50%;" title="Black: 0.0"></div>
+										</div>
+									</div>
+								</div>
+							</div>
 						</div>
+					</div>
 
-						<div class="bg-black/20 rounded-xl p-3 border border-white/5 flex flex-col justify-start shadow-inner">
-							<h3 class="text-xs font-bold text-red-400 uppercase tracking-widest mb-3 opacity-90 border-b border-white/5 pb-1 text-center">Tactical Sharpness</h3>
-							<div class="space-y-3 flex-1 flex flex-col justify-center" id="group-tactical"></div>
+					<div id="expanded-game" class="hidden flex-1 overflow-hidden flex flex-col">
+						<div id="game-analysis-expanded" class="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-2 space-y-6">
+							<div class="flex items-center justify-between bg-black/30 p-4 rounded-xl border border-white/5 shadow-inner">
+								<div>
+									<div class="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Game Type</div>
+									<div id="game-exp-type" class="text-lg font-bold text-yellow-500 tracking-wide">-</div>
+								</div>
+								<div class="text-right">
+									<div class="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Volatility</div>
+									<div id="game-exp-volatility" class="text-sm font-bold text-slate-200">-</div>
+								</div>
+							</div>
+
+							<div class="grid grid-cols-2 gap-6">
+								<div class="space-y-4">
+									<h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-white/10 pb-2">Phase Accuracy</h4>
+									<div class="space-y-3">
+										<div class="flex justify-between items-center">
+											<span class="text-xs font-bold text-slate-300">Opening</span>
+											<div class="flex gap-3 text-xs font-mono">
+												<span id="game-exp-op-w" class="text-white">0%</span>
+												<span id="game-exp-op-b" class="text-slate-500">0%</span>
+											</div>
+										</div>
+										<div class="flex justify-between items-center">
+											<span class="text-xs font-bold text-slate-300">Middlegame</span>
+											<div class="flex gap-3 text-xs font-mono">
+												<span id="game-exp-mg-w" class="text-white">0%</span>
+												<span id="game-exp-mg-b" class="text-slate-500">0%</span>
+											</div>
+										</div>
+										<div class="flex justify-between items-center">
+											<span class="text-xs font-bold text-slate-300">Endgame</span>
+											<div class="flex gap-3 text-xs font-mono">
+												<span id="game-exp-eg-w" class="text-white">0%</span>
+												<span id="game-exp-eg-b" class="text-slate-500">0%</span>
+											</div>
+										</div>
+									</div>
+
+									<div class="mt-4 pt-4 border-t border-white/5 flex justify-between items-center">
+										<span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Missed Opportunities</span>
+										<div class="flex gap-3 text-xs font-mono font-bold">
+											<span id="game-exp-miss-w" class="text-red-400">0</span>
+											<span id="game-exp-miss-b" class="text-red-400/50">0</span>
+										</div>
+									</div>
+								</div>
+
+								<div class="space-y-4">
+									<h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-white/10 pb-2">Playstyle Traits</h4>
+									
+									<div class="space-y-2.5">
+										<div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+											<span class="text-slate-400 w-20">Tactics</span>
+											<div class="flex-1 mx-3 h-4 bg-slate-800 rounded-full overflow-hidden flex shadow-inner">
+												<div id="game-bar-tactics-w" class="bg-slate-200 h-full text-slate-900 flex items-center justify-center transition-all duration-500 overflow-hidden" style="width: 0%;"></div>
+												<div id="game-bar-tactics-b" class="bg-slate-950 h-full text-slate-300 border-l border-slate-700 flex items-center justify-center transition-all duration-500 overflow-hidden" style="width: 0%;"></div>
+											</div>
+										</div>
+										<div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+											<span class="text-slate-400 w-20">Strategy</span>
+											<div class="flex-1 mx-3 h-4 bg-slate-800 rounded-full overflow-hidden flex shadow-inner">
+												<div id="game-bar-strategy-w" class="bg-slate-200 h-full text-slate-900 flex items-center justify-center transition-all duration-500 overflow-hidden" style="width: 0%;"></div>
+												<div id="game-bar-strategy-b" class="bg-slate-950 h-full text-slate-300 border-l border-slate-700 flex items-center justify-center transition-all duration-500 overflow-hidden" style="width: 0%;"></div>
+											</div>
+										</div>
+										<div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+											<span class="text-slate-400 w-20">Intuition</span>
+											<div class="flex-1 mx-3 h-4 bg-slate-800 rounded-full overflow-hidden flex shadow-inner">
+												<div id="game-bar-intuition-w" class="bg-slate-200 h-full text-slate-900 flex items-center justify-center transition-all duration-500 overflow-hidden" style="width: 0%;"></div>
+												<div id="game-bar-intuition-b" class="bg-slate-950 h-full text-slate-300 border-l border-slate-700 flex items-center justify-center transition-all duration-500 overflow-hidden" style="width: 0%;"></div>
+											</div>
+										</div>
+										<div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+											<span class="text-slate-400 w-20">Calculation</span>
+											<div class="flex-1 mx-3 h-4 bg-slate-800 rounded-full overflow-hidden flex shadow-inner">
+												<div id="game-bar-calculation-w" class="bg-slate-200 h-full text-slate-900 flex items-center justify-center transition-all duration-500 overflow-hidden" style="width: 0%;"></div>
+												<div id="game-bar-calculation-b" class="bg-slate-950 h-full text-slate-300 border-l border-slate-700 flex items-center justify-center transition-all duration-500 overflow-hidden" style="width: 0%;"></div>
+											</div>
+										</div>
+										<div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+											<span class="text-slate-400 w-20">Time Mgmt</span>
+											<div class="flex-1 mx-3 h-4 bg-slate-800 rounded-full overflow-hidden flex shadow-inner">
+												<div id="game-bar-time_management-w" class="bg-slate-200 h-full text-slate-900 flex items-center justify-center transition-all duration-500 overflow-hidden" style="width: 0%;"></div>
+												<div id="game-bar-time_management-b" class="bg-slate-950 h-full text-slate-300 border-l border-slate-700 flex items-center justify-center transition-all duration-500 overflow-hidden" style="width: 0%;"></div>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
 						</div>
+					</div>
+				</div>
+								
 
-						<div class="bg-black/20 rounded-xl p-3 border border-white/5 flex flex-col justify-start shadow-inner">
-							<h3 class="text-xs font-bold text-purple-400 uppercase tracking-widest mb-3 opacity-90 border-b border-white/5 pb-1 text-center">Territory & Structure</h3>
-							<div class="space-y-3 flex-1 flex flex-col justify-center" id="group-territory"></div>
+				<div class="glass-panel p-3 rounded-xl border border-white/10 h-32 flex-none flex flex-col shadow-lg">
+					<h3 class="text-slate-500 uppercase tracking-widest text-xs font-bold mb-1">Evaluation</h3>
+					<div class="relative flex-1 w-full h-full min-h-0">
+						<canvas id="evalChart" class="absolute inset-0"></canvas>
+					</div>
+				</div>
+
+				<div class="glass-panel p-4 rounded-xl border border-white/10 flex-none space-y-4 shadow-lg bg-black/20">
+					
+					<div class="flex justify-center gap-2">
+						<button onclick="boardConfig.start()" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-base"><i class="fa-solid fa-backward-fast"></i></button>
+						<button onclick="boardConfig.prev()" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-base"><i class="fa-solid fa-chevron-left"></i></button>
+						<button onclick="boardConfig.flip()" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-yellow-500 hover:text-yellow-400 transition-colors text-base mx-2 shadow-[0_0_10px_rgba(234,179,8,0.1)]"><i class="fa-solid fa-retweet"></i></button>
+						<button onclick="boardConfig.next()" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-base"><i class="fa-solid fa-chevron-right"></i></button>
+						<button onclick="boardConfig.end()" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-base"><i class="fa-solid fa-forward-fast"></i></button>
+					</div>
+
+					<div class="flex gap-2 relative">
+						<div class="relative flex-1">
+							<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+								<i class="fa-solid fa-chess-board text-slate-500 text-sm"></i>
+							</div>
+							<input type="text" id="fen-box" readonly 
+								   class="w-full bg-black/40 border border-slate-700 text-slate-400 text-xs font-mono rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:border-yellow-500/50 transition-colors cursor-text select-all"
+								   value="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1">
 						</div>
+						<button onclick="copyFen()" class="px-4 bg-black/40 hover:bg-white/10 border border-slate-700 rounded-xl text-slate-400 hover:text-white transition-colors" title="Copy FEN">
+							<i class="fa-regular fa-copy"></i>
+						</button>
+					</div>
+				</div>
 
-                        <div class="col-span-2 bg-black/20 rounded-xl p-3 border border-white/5 flex flex-col justify-center shadow-inner">
-                            <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 opacity-90 border-b border-white/5 pb-1">Time & Decisions</h3>
-                            <div class="grid grid-cols-3 gap-6">
-                                <div class="flex flex-col items-center justify-center">
-                                    <span class="text-[10px] text-slate-500 uppercase font-bold mb-1">Time Spent</span>
-                                    <span id="metric-time" class="text-lg font-mono text-white font-bold">-</span>
-                                </div>
-                                <div class="flex flex-col items-center justify-center border-l border-white/5 pl-2">
-                                    <span class="text-[10px] text-slate-500 uppercase font-bold mb-1">Move Quality</span>
-                                    <span id="metric-class" class="text-sm font-bold text-white uppercase tracking-wider">-</span>
-                                </div>
-                                <div class="flex flex-col items-center justify-center border-l border-white/5 pl-2">
-                                    <span class="text-[10px] text-slate-500 uppercase font-bold mb-1">Criticality</span>
-                                    <div class="w-full flex items-center gap-2">
-                                        <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
-                                            <div id="bar-stress" class="w-0 bg-red-500 h-full transition-all duration-300"></div>
-                                        </div>
-                                        <span id="val-stress" class="text-[10px] font-mono text-slate-400 w-6 text-right">0.0</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex-none mt-auto space-y-4">
-                        <div class="flex justify-center gap-3">
-                            <button onclick="boardConfig.start()" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-sm"><i class="fa-solid fa-backward-fast"></i></button>
-                            <button onclick="boardConfig.prev()" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-sm"><i class="fa-solid fa-chevron-left"></i></button>
-                            <button onclick="boardConfig.flip()" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-yellow-500 hover:text-yellow-400 transition-colors text-sm"><i class="fa-solid fa-retweet"></i></button>
-                            <button onclick="boardConfig.next()" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-sm"><i class="fa-solid fa-chevron-right"></i></button>
-                            <button onclick="boardConfig.end()" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-sm"><i class="fa-solid fa-forward-fast"></i></button>
-                        </div>
-                        <div class="relative group">
-                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                <i class="fa-solid fa-chess-board text-slate-500 text-sm"></i>
-                            </div>
-                            <input type="text" id="fen-box" readonly 
-                                   class="w-full bg-black/30 border border-slate-700 text-slate-400 text-xs font-mono rounded-xl pl-12 pr-12 py-3 focus:outline-none focus:border-yellow-500/50 transition-colors cursor-text select-all"
-                                   value="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1">
-                            <button onclick="copyFen()" class="absolute inset-y-0 right-0 px-4 text-slate-500 hover:text-white transition-colors" title="Copy FEN">
-                                <i class="fa-regular fa-copy text-sm"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div> </div>
+			</div>
+			</div>
     
         </div>
     </div>
@@ -216,951 +407,119 @@
 </div>
 
 
+<div id="custom-line-tooltip" class="fixed z-50 hidden max-w-md bg-slate-900 text-slate-200 text-xs font-mono p-3 rounded-xl border border-slate-600 shadow-2xl pointer-events-none break-words leading-relaxed">
+</div>
+
+
+<div id="pawn-insights-panel" class="hidden fixed z-50 w-80 bg-slate-900/95 backdrop-blur-md border border-slate-600 shadow-2xl rounded-xl flex flex-col overflow-hidden" style="top: 25%; left: 5%;">
+    <div id="pawn-insights-header" class="bg-slate-800 px-4 py-3 border-b border-slate-600 flex justify-between items-center cursor-move select-none active:bg-slate-700 transition-colors">
+        <h3 class="text-xs font-bold text-yellow-500 uppercase tracking-widest flex items-center">
+            <i class="fa-solid fa-chess-pawn mr-2 text-sm"></i> Pawn Insights
+        </h3>
+        <button onclick="togglePawnInsights()" class="text-slate-400 hover:text-white transition-colors">
+            <i class="fa-solid fa-times"></i>
+        </button>
+    </div>
+    
+    <div class="p-4 text-xs max-h-[60vh] overflow-y-auto custom-scrollbar">
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <div class="font-bold text-slate-200 border-b border-slate-700 pb-1 mb-2">White</div>
+                <div id="pawn-insights-w-score" class="mb-2">-</div>
+                <div class="text-slate-400 mb-1">Islands: <span id="pawn-insights-w-islands" class="text-white font-mono">0</span></div>
+                <div class="text-slate-400 mb-1 leading-tight">Majority: <br><span id="pawn-insights-w-majority" class="text-white font-mono mt-1 block">-</span></div>
+                <div class="text-slate-400 mb-1">Shelter: <span id="pawn-insights-w-shelter" class="text-white font-mono">0</span> pawns</div>
+                <div class="text-slate-400 mb-1">Blocked: <span id="pawn-insights-w-blocked" class="text-white font-mono">0</span></div>
+            </div>
+            <div>
+                <div class="font-bold text-slate-200 border-b border-slate-700 pb-1 mb-2">Black</div>
+                <div id="pawn-insights-b-score" class="mb-2">-</div>
+                <div class="text-slate-400 mb-1">Islands: <span id="pawn-insights-b-islands" class="text-white font-mono">0</span></div>
+                <div class="text-slate-400 mb-1 leading-tight">Majority: <br><span id="pawn-insights-b-majority" class="text-white font-mono mt-1 block">-</span></div>
+                <div class="text-slate-400 mb-1">Shelter: <span id="pawn-insights-b-shelter" class="text-white font-mono">0</span> pawns</div>
+                <div class="text-slate-400 mb-1">Blocked: <span id="pawn-insights-b-blocked" class="text-white font-mono">0</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div id="safety-insights-panel" class="hidden fixed z-50 w-80 bg-slate-900/95 backdrop-blur-md border border-slate-600 shadow-2xl rounded-xl flex flex-col overflow-hidden" style="top: 25%; right: 5%;">
+    <div id="safety-insights-header" class="bg-slate-800 px-4 py-3 border-b border-slate-600 flex justify-between items-center cursor-move select-none active:bg-slate-700 transition-colors">
+        <h3 class="text-xs font-bold text-yellow-500 uppercase tracking-widest flex items-center">
+            <i class="fa-solid fa-chess-king mr-2 text-sm"></i> King Safety
+        </h3>
+        <button onclick="toggleSafetyInsights()" class="text-slate-400 hover:text-white transition-colors">
+            <i class="fa-solid fa-times"></i>
+        </button>
+    </div>
+    
+    <div class="p-4 text-xs max-h-[60vh] overflow-y-auto custom-scrollbar">
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <div class="font-bold text-slate-200 border-b border-slate-700 pb-1 mb-2">White</div>
+                <div id="safety-insights-w-score" class="mb-2">-</div>
+                <div class="text-slate-400 mb-1">File: <span id="safety-insights-w-file" class="text-white font-mono">Closed</span></div>
+                <div class="text-slate-400 mb-1">Shield: <span id="safety-insights-w-shield" class="text-white font-mono">Intact</span></div>
+                <div class="text-slate-400 mb-1">Attackers: <span id="safety-insights-w-attackers" class="text-red-400 font-mono font-bold">0</span></div>
+                <div class="text-slate-400 mb-1">Shelter: <span id="safety-insights-w-shelter" class="text-white font-mono">0</span> pcs</div>
+            </div>
+            <div>
+                <div class="font-bold text-slate-200 border-b border-slate-700 pb-1 mb-2">Black</div>
+                <div id="safety-insights-b-score" class="mb-2">-</div>
+                <div class="text-slate-400 mb-1">File: <span id="safety-insights-b-file" class="text-white font-mono">Closed</span></div>
+                <div class="text-slate-400 mb-1">Shield: <span id="safety-insights-b-shield" class="text-white font-mono">Intact</span></div>
+                <div class="text-slate-400 mb-1">Attackers: <span id="safety-insights-b-attackers" class="text-red-400 font-mono font-bold">0</span></div>
+                <div class="text-slate-400 mb-1">Shelter: <span id="safety-insights-b-shelter" class="text-white font-mono">0</span> pcs</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
 <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-
 <script>
-// ==========================================
-// 1. CONFIG & STATE
-// ==========================================
-const TIME_STYLES = {{ tc_styles | tojson }};
-
-// Global State
-let allGamesCache = [];      
-let currentGamesList = [];   
-let availableArchives = [];  
-let archiveIndex = 0;        
-let currentOffset = 0;       
-let currentUserCache = "";   
-let isLoading = false;       
-
-let activeFilters = {
-    bullet: true, blitz: true, rapid: true,
-    win: true, draw: true, loss: true
-};
-
-
-let gameHeaders = {};
-let evalChart = null;
-let sanHistory = [];
-
-const BATCH_SIZE = 10;      
-let currentAnalysisData = [];
-
-const UI_GROUPS = {
-    'group-positional':   ['KingSafety', 'PawnStructure', 'CenterControl'],
-    'group-coordination': ['Activity', 'Harmony', 'Mobility'], // Re-ordered slightly
-    'group-tactical':     ['Material', 'Threats', 'Aggression'],
-    'group-territory':    ['Space', 'Squeeze', 'Integrity', 'Weakness'] // 'Weakness' matches server key
-};
-
-let viewMode = 'absolute'; // 'absolute' or 'relative'
-let moveTimes = []; // Cache for calculated move times
-
-// ==========================================
-// 2. DASHBOARD & ANALYSIS LOGIC
-// ==========================================
-
-
-async function selectGame(game) {
-    const pgn = game.pgn;
-    parseMoveTimes(pgn); // Pre-calculate clock times
-    
-    // Determine User Color
-    const isBlack = game.black.username.toLowerCase() === currentUserCache.toLowerCase();
-    const userSide = isBlack ? 'black' : 'white';
-
-    // --- PHASE 1: SHOW DASHBOARD INSTANTLY ---
-    document.getElementById('games-list-view').classList.add('hidden');
-    document.getElementById('import-view').classList.add('hidden');
-    document.getElementById('dashboard-view').classList.remove('hidden');
-
-    // 1. Setup Board (Left Side) immediately
-    const headerParser = new Chess();
-    headerParser.load_pgn(pgn);
-    gameHeaders = headerParser.header(); // Get names/ratings
-    
-    initChessBoard(pgn); // Setup the board visuals
-    board.orientation(userSide);
-    updatePlayerInfo();  // Show names immediately
-    
-    // 2. Show Loader / Hide Content (Right Side)
-    const loader = document.getElementById('analysis-loader');
-    const content = document.getElementById('analysis-content');
-    const loaderText = document.getElementById('loader-text');
-
-    if(loader) loader.classList.remove('hidden');
-    if(content) {
-        content.classList.remove('opacity-100');
-        content.classList.add('opacity-0'); 
-        // We don't use 'hidden' for content to keep layout width calculated, 
-        // but since it overlaps, opacity is safer with z-index. 
-        // Or strictly toggle hidden if layout shifts are fine.
-        // Let's ensure loader is z-20 (above content).
-    }
-
-    // --- PHASE 2: RUN ANALYSIS ---
-    try {
-        const chess = new Chess();
-        if (!chess.load_pgn(pgn)) throw new Error("Invalid PGN");
-
-        const fens = [];
-        const replayChess = new Chess(); 
-        fens.push(replayChess.fen()); 
-        
-        const moves = chess.history();
-        moves.forEach(move => {
-            replayChess.move(move);
-            fens.push(replayChess.fen());
-        });
-
-        const results = await chessEngine.analyzeGameBatch(pgn, fens, (curr, total) => {
-            if (loaderText) {
-                if (curr === "SERVER_PHASE") {
-                    // Update text for the server wait time
-                    loaderText.innerText = "Processing Static Metrics...";
-                    
-                    // Optional: Make it pulse faster or change color
-                    loaderText.classList.add('text-yellow-400');
-                } else {
-                    // Normal Progress
-                    loaderText.innerText = `Analyzing Move ${curr} / ${total}`;
-                }
-            }
-        });
-		
-		if (!results) {
-             return; 
-        }
-
-
-        // --- PHASE 3: SHOW RESULTS ---
-        renderDashboard(results, pgn, userSide, game.time_class);
-
-    } catch (e) {
-        console.error("Analysis Failed:", e);
-        alert("Error: " + e.message);
-        resetView(); // Go back if error
-    }
-}
-
-// ==========================================
-// 3. UI HANDLERS
-// ==========================================
-
-function handleClick(index) {
-    const game = currentGamesList[index];
-    if (game) {
-        selectGame(game);
-    }
-}
-window.handleClick = handleClick;
-
-// ==========================================
-// 4. FETCH & RENDER LIST LOGIC
-// ==========================================
-
-function toggleFilter(key) {
-    activeFilters[key] = !activeFilters[key];
-    updateFilterUI(key);
-    refreshGameList();
-}
-
-function resetFilters(enableAll) {
-    Object.keys(activeFilters).forEach(k => activeFilters[k] = enableAll);
-    Object.keys(activeFilters).forEach(k => updateFilterUI(k));
-    refreshGameList();
-}
-
-function updateFilterUI(key) {
-    const btn = document.getElementById(`filter-${key}`);
-    if (!btn) return; 
-    
-    if (activeFilters[key]) {
-        btn.classList.add('active', 'bg-opacity-10');
-        btn.classList.remove('opacity-25', 'grayscale');
-    } else {
-        btn.classList.remove('active', 'bg-opacity-10');
-        btn.classList.add('opacity-25', 'grayscale');
-    }
-}
-
-function refreshGameList() {
-    const container = document.getElementById('games-container');
-    container.innerHTML = '';
-    currentGamesList = []; 
-    
-    appendGamesToDOM(allGamesCache);
-    currentOffset = allGamesCache.length;
-    
-    if (container.scrollHeight <= container.clientHeight) {
-        renderNextBatch();
-    }
-}
-
-async function fetchGames() {
-    const username = document.getElementById('username-input').value.trim();
-    const btn = document.getElementById('fetch-btn');
-    const btnText = document.getElementById('btn-text');
-    const loader = document.getElementById('btn-loader');
-    const errorDiv = document.getElementById('error-msg');
-
-    if (!username) return;
-
-    // Reset State
-    allGamesCache = [];
-    currentGamesList = []; 
-    availableArchives = [];
-    archiveIndex = 0;
-    currentOffset = 0;
-    currentUserCache = username;
-    isLoading = false;
-
-    // UI Loading State
-    btn.disabled = true;
-    btn.classList.add('opacity-75');
-    btnText.innerText = "Searching...";
-    loader.classList.remove('hidden');
-    errorDiv.classList.add('hidden');
-    document.getElementById('games-container').innerHTML = ''; 
-
-    try {
-        const archivesRes = await fetch(`https://api.chess.com/pub/player/${username}/games/archives`);
-        if (!archivesRes.ok) throw new Error('User not found');
-        
-        const archivesData = await archivesRes.json();
-        if (archivesData.archives.length === 0) throw new Error('No game history found.');
-
-        availableArchives = archivesData.archives.reverse();
-        await fetchNextMonth();
-
-        if (allGamesCache.length === 0) throw new Error('No games found in recent history.');
-        
-        document.getElementById('import-view').classList.add('hidden');
-        document.getElementById('games-list-view').classList.remove('hidden');
-        document.getElementById('main-header').classList.add('hidden'); 
-        
-        renderNextBatch();
-
-    } catch (err) {
-        errorDiv.innerText = err.message;
-        errorDiv.classList.remove('hidden');
-    } finally {
-        resetBtn();
-    }
-}
-
-async function fetchNextMonth() {
-    if (archiveIndex >= availableArchives.length) return false;
-
-    const url = availableArchives[archiveIndex];
-    archiveIndex++; 
-
-    const res = await fetch(url);
-    const data = await res.json();
-    const newGames = data.games.reverse();
-    
-    allGamesCache = allGamesCache.concat(newGames);
-    return true; 
-}
-
-async function renderNextBatch() {
-    if (isLoading) return;
-    isLoading = true;
-
-    const loader = document.getElementById('scroll-loader');
-    const container = document.getElementById('games-container');
-    
-    loader.classList.remove('hidden');
-
-    if (currentOffset + BATCH_SIZE >= allGamesCache.length) {
-        await fetchNextMonth();
-    }
-
-    setTimeout(() => {
-        if (currentOffset >= allGamesCache.length) {
-            loader.classList.add('hidden');
-            isLoading = false;
-            return;
-        }
-
-        const batch = allGamesCache.slice(currentOffset, currentOffset + BATCH_SIZE);
-        appendGamesToDOM(batch);
-        currentOffset += BATCH_SIZE;
-        
-        loader.classList.add('hidden');
-        isLoading = false;
-
-        if (container.scrollHeight <= container.clientHeight && currentOffset < allGamesCache.length) {
-            renderNextBatch();
-        }
-        
-    }, 300);
-}
-
-function appendGamesToDOM(games) {
-    const container = document.getElementById('games-container');
-    const startIndex = currentGamesList.length;
-    currentGamesList = currentGamesList.concat(games);
-
-    games.forEach((game, i) => {
-        const globalIndex = startIndex + i;
-        const timeClass = game.time_class; 
-        const isWhite = game.white.username.toLowerCase() === currentUserCache.toLowerCase();
-        const opponent = isWhite ? game.black : game.white;
-        const myResult = isWhite ? game.white.result : game.black.result;
-        
-        let resultKey = 'loss';
-        if (myResult === 'win') resultKey = 'win';
-        else if (['agreed', 'repetition', 'stalemate', 'insufficient'].includes(myResult)) resultKey = 'draw';
-        
-        if (!activeFilters[timeClass]) return;
-        if (!activeFilters[resultKey]) return;
-        
-        let resultColor = 'text-slate-500'; 
-        let resultIcon = 'fa-minus';
-        
-        if (myResult === 'win') {
-            resultColor = 'text-green-400';
-            resultIcon = 'fa-trophy';
-        } else if (['checkmated', 'resigned', 'timeout', 'abandoned'].includes(myResult)) {
-            resultColor = 'text-red-400';
-            resultIcon = 'fa-xmark';
-        }
-
-        const timeColor = TIME_STYLES[timeClass] || 'text-slate-500'; 
-
-        const card = `
-            <div onclick="handleClick(${globalIndex})" 
-                 class="glass-panel p-4 rounded-xl flex items-center justify-between border-l-4 ${myResult === 'win' ? 'border-green-500' : (resultColor === 'text-red-400' ? 'border-red-500' : 'border-slate-500')} animate-fade-in cursor-pointer hover:bg-white/5 transition-colors">
-                <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center ${resultColor} bg-opacity-20">
-                        <i class="fa-solid ${resultIcon}"></i>
-                    </div>
-                    <div>
-                        <div class="text-white font-bold text-sm">vs. ${opponent.username} <span class="text-xs text-slate-500">(${opponent.rating})</span></div>
-                        <div class="text-xs font-bold uppercase tracking-wider ${timeColor}">
-                            ${timeClass} <span class="text-slate-500 font-normal capitalize">• ${new Date(game.end_time * 1000).toLocaleDateString()}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="text-xs font-bold uppercase tracking-wider ${resultColor}">
-                    ${myResult}
-                </div>
-            </div>
-        `;
-        container.innerHTML += card;
-    });
-}
-
-document.getElementById('games-container').addEventListener('scroll', function() {
-    const { scrollTop, scrollHeight, clientHeight } = this;
-    if (scrollTop + clientHeight >= scrollHeight - 50) {
-        renderNextBatch();
-    }
-});
-
-function resetView() {
-	if (window.chessEngine) {
-			window.chessEngine.cancelAnalysis();
-		}
-    // 1. Show the "Search" view
-    document.getElementById('import-view').classList.remove('hidden');
-    document.getElementById('main-header').classList.remove('hidden');
-    
-    // 2. Hide the "List" view
-    document.getElementById('games-list-view').classList.add('hidden');
-    
-    // 3. HIDE THE DASHBOARD (This was missing)
-    document.getElementById('dashboard-view').classList.add('hidden');
-    
-    // 4. Cleanup
-    document.getElementById('username-input').value = '';
-    
-    // Optional: Stop any playing animations if you add them later
-    if(board) board.clear(); 
-}
-
-function resetBtn() {
-    const btn = document.getElementById('fetch-btn');
-    const btnText = document.getElementById('btn-text');
-    const loader = document.getElementById('btn-loader');
-    
-    btn.disabled = false;
-    btn.classList.remove('opacity-75');
-    btnText.innerText = "Find Games";
-    loader.classList.add('hidden');
-}
-
-window.fetchGames = fetchGames;
-window.toggleFilter = toggleFilter;
-window.resetFilters = resetFilters;
-window.resetView = resetView;
-
-
-// ==========================================
-// BOARD LOGIC & STATE
-// ==========================================
-let board = null;
-let gameHistory = []; // Array of FENs
-let currentMoveIndex = 0;
-
-// Expose controls to window for HTML buttons
-window.boardConfig = {
-    start: () => { jumpToMove(0); },
-    end: () => { jumpToMove(gameHistory.length - 1); },
-    prev: () => { if (currentMoveIndex > 0) jumpToMove(currentMoveIndex - 1); },
-    next: () => { if (currentMoveIndex < gameHistory.length - 1) jumpToMove(currentMoveIndex + 1); },
-    flip: () => { 
-        if(board) {
-            board.flip();
-            updatePlayerInfo();
-            updateAnalysisPanel(); 
-        }
-    }
-};
-
-function initChessBoard(pgn) {
-    const chess = new Chess();
-    if (!chess.load_pgn(pgn)) return;
-    
-    // 1. Generate History (FENs and SANs)
-    gameHistory = [];
-    sanHistory = []; 
-    
-    const replay = new Chess();
-    gameHistory.push(replay.fen()); 
-    sanHistory.push("Start"); 
-    
-    // Get verbose history to access SANs
-    const history = chess.history({ verbose: true });
-    
-    history.forEach((m, i) => {
-        replay.move(m);
-        gameHistory.push(replay.fen());
-        
-        // --- FIX IS HERE ---
-        // Calculate move number based on index 'i'
-        // i=0 -> Move 1 (White), i=1 -> Move 1 (Black), i=2 -> Move 2 (White)
-        const moveNumber = Math.floor(i / 2) + 1;
-        
-        // If 'i' is even (0, 2, 4...), it is White's turn
-        // If 'i' is odd (1, 3, 5...), it is Black's turn
-        const isWhite = (i % 2 === 0);
-        
-        const label = isWhite 
-            ? `${moveNumber}. ${m.san}`      // "1. e4"
-            : `${moveNumber}... ${m.san}`;   // "1... e5"
-            
-        sanHistory.push(label);
-    });
-    
-    currentMoveIndex = 0; 
-
-    if (board) board.destroy();
-    board = Chessboard('board', {
-        position: 'start',
-        draggable: false, 
-        pieceTheme: '/static/images/chesspieces/wikipedia/{piece}.png'
-    });
-    window.addEventListener('resize', board.resize);
-}
-
-function updateBoard() {
-    if (!gameHistory[currentMoveIndex]) return;
-    
-    const fen = gameHistory[currentMoveIndex];
-    board.position(fen);
-    
-    const fenBox = document.getElementById('fen-box');
-    if(fenBox) fenBox.value = fen;
-}
-
-
-function renderDashboard(analysisResults, originalPgn, userSide, timeClass) {
-    // 1. Store Data
-    currentAnalysisData = analysisResults.data || [];
-
-    // 2. We already inited board in selectGame, but we can ensure orientation is consistent
-    board.orientation(userSide);
-    
-    // 3. Update Visuals
-    updateEvalBox();
-    renderEvalGraph(analysisResults.data);
-    updateAnalysisPanel(); // Updates the first move metrics
-    
-    // 4. Update Time Control Box
-    const tcBox = document.getElementById('time-control-box');
-    const tcColorClass = TIME_STYLES[timeClass] || 'text-slate-400';
-    if(tcBox) {
-        tcBox.className = `flex items-center justify-center px-4 rounded-md bg-slate-800 border border-slate-700 font-bold text-xs uppercase tracking-wider ${tcColorClass}`;
-        tcBox.innerText = timeClass || 'Unknown';
-    }
-
-    // --- PHASE 4: REVEAL CONTENT ---
-    const loader = document.getElementById('analysis-loader');
-    const content = document.getElementById('analysis-content');
-
-    if (loader) {
-        loader.classList.add('opacity-0'); // Fade out
-        setTimeout(() => loader.classList.add('hidden'), 500); // Hide after fade
-    }
-    
-    if (content) {
-        // Wait slightly for loader to fade
-        setTimeout(() => {
-            content.classList.remove('opacity-0');
-            content.classList.add('opacity-100');
-        }, 300);
-    }
-}
-
-
-function copyFen() {
-    const fenBox = document.getElementById('fen-box');
-    fenBox.select();
-    fenBox.setSelectionRange(0, 99999); // For mobile devices
-    
-    navigator.clipboard.writeText(fenBox.value).then(() => {
-        // Optional visual feedback
-        const btn = fenBox.nextElementSibling;
-        const icon = btn.querySelector('i');
-        icon.classList.remove('fa-copy', 'fa-regular');
-        icon.classList.add('fa-check', 'fa-solid', 'text-green-400');
-        
-        setTimeout(() => {
-            icon.classList.remove('fa-check', 'fa-solid', 'text-green-400');
-            icon.classList.add('fa-copy', 'fa-regular');
-        }, 1500);
-    });
-}
-
-function updateEvalBox() {
-    const box = document.getElementById('eval-box');
-    const data = currentAnalysisData[currentMoveIndex]; 
-    
-    let score = null;
-    let isMate = false;
-
-    // Check for data
-    if (data) {
-        if (data.dynamic && data.dynamic.top_lines && data.dynamic.top_lines.length > 0) {
-            const line = data.dynamic.top_lines[0];
-            score = line.score; 
-            isMate = Math.abs(score) > 10000;
-        } 
-        else if (data.eval !== undefined) {
-            score = data.eval;
-            isMate = Math.abs(score) > 10000; 
-        }
-    }
-
-    // Handle missing data
-    if (score === null) {
-        box.innerText = "-";
-        box.style.backgroundColor = "#475569"; 
-        box.style.color = "white";
-        return;
-    }
-
-    // Display Text
-    if (isMate) {
-        const mateDist = 20000 - Math.abs(score);
-        
-        // --- FIX: Show "#" or "Mate" if distance is 0 ---
-        if (mateDist === 0) {
-            box.innerText = "#"; 
-        } else {
-            box.innerText = `M${mateDist}`;
-        }
-        
-        // score is +/- 20000, so score > 0 is safe (it won't be 0)
-        const isWhiteMate = score > 0;
-        box.style.backgroundColor = isWhiteMate ? "#ffffff" : "#000000";
-        box.style.color = isWhiteMate ? "black" : "white";
-    } else {
-        // Centipawns
-        const displayScore = (score / 100).toFixed(1);
-        box.innerText = displayScore > 0 ? `+${displayScore}` : displayScore;
-
-        const clamped = Math.max(-300, Math.min(300, score));
-        const intensity = Math.round(((clamped + 300) / 600) * 255);
-        
-        box.style.backgroundColor = `rgb(${intensity}, ${intensity}, ${intensity})`;
-        box.style.color = intensity > 150 ? "black" : "white";
-    }
-}
-
-function updatePlayerInfo() {
-    if (!board) return;
-
-    const orientation = board.orientation(); // 'white' or 'black'
-    const topEl = document.getElementById('player-top');
-    const botEl = document.getElementById('player-bottom');
-
-    // Helper to generate HTML
-    const getHtml = (name, elo, title) => `
-        <div class="flex items-center gap-3">
-            <div class="font-bold text-white text-lg">${name}</div>
-            <div class="text-slate-500 text-sm font-mono bg-slate-800 px-2 py-0.5 rounded">${elo}</div>
-        </div>
-    `;
-
-    // Defaults
-    const whiteName = gameHeaders.White || 'White';
-    const whiteElo  = gameHeaders.WhiteElo || '?';
-    const blackName = gameHeaders.Black || 'Black';
-    const blackElo  = gameHeaders.BlackElo || '?';
-
-    if (orientation === 'white') {
-        topEl.innerHTML = getHtml(blackName, blackElo);
-        botEl.innerHTML = getHtml(whiteName, whiteElo);
-    } else {
-        topEl.innerHTML = getHtml(whiteName, whiteElo);
-        botEl.innerHTML = getHtml(blackName, blackElo);
-    }
-}
-
-// --- UPDATED: Graph with Black Rectangle (CSS handled) ---
-function renderEvalGraph(analysisData) {
-    const ctx = document.getElementById('evalGraph').getContext('2d');
-
-    const scores = analysisData.map(d => {
-        // New structure: 'eval' is at top level
-        let val = (d.eval || 0) / 100; 
-        
-        // Handle Mate (values > 1000 usually mean mate in X in CP terms)
-        if (Math.abs(val) > 50) { // arbitrary threshold for mate visual clamp
-            val = val > 0 ? 5 : -5;
-        }
-        return Math.max(-5, Math.min(5, val));
-    });
-
-    const labels = analysisData.map((_, i) => i); 
-
-    // 2. Create Gradient
-    const gradient = ctx.createLinearGradient(0, 0, 0, 128); 
-    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.85)');   
-    gradient.addColorStop(0.4, 'rgba(255, 255, 255, 0)');    
-    gradient.addColorStop(0.6, 'rgba(0, 0, 0, 0)');          
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.85)');         
-
-    // 3. Destroy old chart
-    if (evalChart) evalChart.destroy();
-
-    // 4. Create Chart
-    evalChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Evaluation',
-                    data: scores,
-                    borderColor: '#fbbf24', 
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    tension: 0.3,
-                    fill: {
-                        target: 'origin',
-                        above: gradient,
-                        below: gradient 
-                    }
-                },
-                {
-                    label: 'Current',
-                    data: [{x: 0, y: scores[0]}],
-                    backgroundColor: '#fbbf24',
-                    borderColor: '#ffffff',
-                    borderWidth: 2,
-                    pointRadius: 6,
-                    pointHoverRadius: 6,
-                    type: 'scatter'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
-            scales: {
-                y: {
-                    min: -5,
-                    max: 5,
-                    grid: { display: false },
-                    ticks: { display: false },
-                    border: { display: false } // Hide JS border (handled by CSS)
-                },
-                x: { 
-                    display: false, // Hide X-Axis completely (clean look inside box)
-                }
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: { enabled: false }
-            },
-            onClick: (e) => {
-                const points = evalChart.getElementsAtEventForMode(e, 'nearest', { intersect: false }, true);
-                if (points.length) {
-                    const index = points[0].index;
-                    jumpToMove(index);
-                }
-            }
-        }
-    });
-}
-
-function updateGraphDot(index) {
-    if (!evalChart) return;
-    
-    // Get the score at this index from the main dataset
-    const score = evalChart.data.datasets[0].data[index];
-    
-    // Update the second dataset (the dot)
-    evalChart.data.datasets[1].data = [{ x: index, y: score }];
-    evalChart.update('none'); // 'none' mode prevents full re-animation
-}
-
-function jumpToMove(index) {
-    currentMoveIndex = index;
-    updateBoard();
-    updateEvalBox();
-    updateGraphDot(index);
-	updateAnalysisPanel();
-}
-
-// 2. Main Update Function 
-function updateAnalysisPanel() {
-    const data = currentAnalysisData[currentMoveIndex];
-    if (!data) return;
-
-    // 1. Current Position Features (Static)
-    // Use 'data' for things that describe the board state NOW (e.g. King Safety, Mobility)
-    const currentFeatures = data; 
-
-    // 2. Previous Move Features (Dynamic)
-    // Use 'prevData' for things that describe the move JUST PLAYED (e.g. Classification, Time Spent)
-    // If we are at Start (index 0), there is no previous move, so we use an empty object.
-    const prevData = currentMoveIndex > 0 ? currentAnalysisData[currentMoveIndex - 1] : null;
-    const moveFeatures = prevData || {}; 
-
-    // A. Update Header (Badge, Clock, Move Text) -> Uses MOVE Data
-    updateHeader(moveFeatures); 
-
-    // B. Update Metrics Grids (Static Groups) -> Uses CURRENT POSITION Data
-    Object.keys(UI_GROUPS).forEach(groupId => {
-        const featureNames = UI_GROUPS[groupId];
-        const container = document.getElementById(groupId);
-        container.innerHTML = ''; 
-
-        featureNames.forEach(featName => {
-            // Static metrics (like KingSafety) belong to the current position
-            const html = createMetricRow(featName, currentFeatures); 
-            container.innerHTML += html;
-        });
-    });
-
-    // C. Update Time/Stress -> Uses MOVE Data
-    // (Time spent, move quality, criticality of the decision made)
-    updateTimeAndStress(moveFeatures);
-}
-
-function createMetricRow(name, data) {
-    const metric = data[name] || { White: 0, Black: 0, Diff: 0 };
-    
-    let valWhite = metric.White;
-    let valBlack = metric.Black;
-
-    const currentOrientation = board ? board.orientation() : 'white';
-    const isWhitePersp = currentOrientation === 'white';
-    
-    let barW_pct = 0;
-    let barB_pct = 0;
-    let textVal = "";
-
-    // --- NEW: Add Spaces to CamelCase Names (e.g. "KingSafety" -> "King Safety") ---
-    // This regex looks for an uppercase letter and adds a space before it, then trims the result.
-    const displayName = name.replace(/([A-Z])/g, ' $1').trim();
-
-    if (viewMode === 'absolute') {
-        barW_pct = Math.min(100, Math.max(0, valWhite * 40)); 
-        barB_pct = Math.min(100, Math.max(0, valBlack * 40));
-        textVal = `${valWhite.toFixed(2)} | ${valBlack.toFixed(2)}`;
-    } else {
-        // Relative: Use Diff
-        let diff = metric.Diff;
-        if (!isWhitePersp) diff = -diff; 
-
-        textVal = (diff > 0 ? "+" : "") + diff.toFixed(2);
-        
-        const barSize = Math.min(100, (Math.abs(diff) * 40)); 
-        
-        if (isWhitePersp) {
-            if (diff > 0) barW_pct = barSize; 
-            else barB_pct = barSize;          
-        } else {
-             if (diff > 0) barB_pct = barSize; 
-             else barW_pct = barSize;          
-        }
-    }
-    
-    return `
-        <div class="flex items-center justify-between mb-2">
-            <span class="text-slate-300 font-bold text-xs w-32 truncate shrink-0 mr-2" title="${displayName}">${displayName}</span>
-            
-            <div class="relative flex-1 h-6 bg-slate-800 rounded flex overflow-hidden border border-white/5">
-                <div class="h-full bg-slate-200 transition-all duration-300" style="width: ${barW_pct}%"></div>
-                <div class="h-full bg-black transition-all duration-300" style="width: ${barB_pct}%"></div>
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <span class="text-xs font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] tracking-wider">
-                        ${textVal}
-                    </span>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-// Helper to format seconds (e.g. 185 -> "3:05")
-function formatTime(seconds) {
-    if (seconds === undefined || seconds === null || seconds === "-") return "-";
-    const secNum = parseInt(seconds, 10);
-    const m = Math.floor(secNum / 60);
-    const s = secNum % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-}
-
-function updateHeader(featuresObj) {
-    const moveData = featuresObj.Move;
-    const timeData = featuresObj.Time || {}; // Now contains time_left
-    
-    // 1. Update Move Badge
-    const badge = document.getElementById('move-badge'); 
-	if (!moveData) {
-        // If Move is null/undefined, hide the badge entirely
-        if (badge) badge.classList.add('hidden');
-    } else {
-    if(badge) {
-        badge.innerText = moveData.classification || "Analyzing";
-        
-        let color = "text-slate-400 border-slate-500/30 bg-slate-500/20";
-        const cls = (moveData.classification || "").toLowerCase();
-        
-        if(['best', 'great', 'brilliant', 'excellent'].some(x => cls.includes(x))) {
-            color = "text-emerald-400 border-emerald-500/30 bg-emerald-500/20 shadow-[0_0_10px_rgba(52,211,153,0.2)]";
-        } else if(['blunder', 'mistake'].some(x => cls.includes(x))) {
-            color = "text-red-400 border-red-500/30 bg-red-500/20 shadow-[0_0_10px_rgba(248,113,113,0.2)]";
-        } else if(['inaccuracy'].some(x => cls.includes(x))) {
-            color = "text-yellow-400 border-yellow-500/30 bg-yellow-500/20";
-        }
-        
-        badge.className = `px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider border transition-all duration-300 ${color}`;
-    }}
-
-    // 2. Update Move Display
-    const moveDisplay = document.getElementById('move-display');
-    if(moveDisplay) {
-        moveDisplay.innerText = sanHistory[currentMoveIndex] || "Start";
-    }
-
-    // 3. Update Clock (Directly from backend data)
-    const timeDisplay = document.getElementById('clock-display');
-    if(timeDisplay) {
-        // Use the new time_left field from the Python backend
-        const displayTime = formatTime(timeData.time_left);
-        timeDisplay.innerHTML = `<i class="fa-regular fa-clock mr-2"></i>${displayTime}`;
-    }
-}
-
-
-// 5. Helper: Time & Stress
-function updateTimeAndStress(featuresObj) {
-    const timeData = featuresObj.Time || {};
-    
-    // 1. Time Spent
-    document.getElementById('metric-time').innerText = (timeData.time_spent || 0) + 's';
-
-    // 2. Classification
-    const clsEl = document.getElementById('metric-class');
-    clsEl.innerText = timeData.classification || "-";
-    
-    let colorClass = "text-slate-500";
-    const label = (timeData.classification || "").toLowerCase();
-    if (label.includes('optimal') || label.includes('efficient')) colorClass = "text-emerald-400";
-    else if (label.includes('panic') || label.includes('rush') || label.includes('paralysis')) colorClass = "text-red-400";
-    else if (label.includes('thinking')) colorClass = "text-yellow-400";
-    clsEl.className = `text-sm font-bold uppercase tracking-wider ${colorClass}`;
-
-    // 3. Stress
-    const stress = featuresObj.Criticality || 0; 
-    document.getElementById('val-stress').innerText = stress.toFixed(2);
-    document.getElementById('bar-stress').style.width = `${Math.min(100, stress * 100)}%`;
-
-    // 4. Complexity (Visual Bar)
-    const compData = featuresObj.Complexity || {White: 0, Black: 0};
-    const compVal = Math.max(Math.abs(compData.White), Math.abs(compData.Black));
-    
-    // Select the complexity bar (middle item in grid)
-    const compContainer = document.querySelector('#metric-class').parentElement.nextElementSibling.previousElementSibling;
-    if(compContainer) {
-         const compBar = compContainer.querySelector('div > div');
-         if(compBar) compBar.style.width = `${Math.min(100, compVal * 100)}%`;
-    }
-}
-
-// 6. Pre-Calculate Move Times (Call this when loading PGN)
-function parseMoveTimes(pgn) {
-    moveTimes = [];
-    moveTimes.push("-"); // Start position
-    
-    // Extract all [%clk H:MM:SS] tags
-    // This regex looks for the pattern inside comments
-    const matches = pgn.match(/\[%clk\s(\d+:\d+:\d+(\.\d+)?)\]/g);
-    
-    if (matches) {
-        matches.forEach(m => {
-            // Clean string to get just 0:05:23
-            const timeStr = m.replace('[%clk ', '').replace(']', '');
-            moveTimes.push(timeStr);
-        });
-    }
-    
-    // Pad if necessary
-    while(moveTimes.length < 1000) moveTimes.push("-");
-}
-
-function updateButtonStates() {
-    const setBtn = (id, isActive) => {
-        const el = document.getElementById(id);
-        if(!el) return;
-        if(isActive) {
-            el.className = "px-4 py-1.5 rounded bg-slate-700 text-white text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all hover:bg-slate-600";
-        } else {
-            el.className = "px-4 py-1.5 rounded text-slate-500 hover:text-white hover:bg-white/5 text-[10px] font-bold uppercase tracking-wider transition-all";
-        }
+    // ==========================================
+    // CONFIG & GLOBAL STATE
+    // ==========================================
+    // Jinja template variables
+    var TIME_STYLES = {{ tc_styles | tojson }};
+
+    // Using 'var' ensures these are globally accessible across all external JS files
+    var allGamesCache = [];      
+    var currentGamesList = [];   
+    var availableArchives = [];  
+    var archiveIndex = 0;        
+    var currentOffset = 0;       
+    var currentUserCache = "";   
+    var isLoading = false;       
+    var BATCH_SIZE = 10;
+    var activeFilters = {
+        bullet: true, blitz: true, rapid: true,
+        win: true, draw: true, loss: true
     };
 
-    setBtn('btn-mode-abs', viewMode === 'absolute');
-    setBtn('btn-mode-rel', viewMode === 'relative');
-    
-}
+    var gameHeaders = {};
+    var currentPlatform = 'chesscom'; 
+    var currentAnalysisData = null; 
+    var evalChartInstance = null;   
+    var currentGameInfo = null;     
 
-// Update the existing toggle functions to call the helper
-function setViewMode(mode) {
-    viewMode = mode;
-    updateButtonStates(); 
-    updateAnalysisPanel();
-}
+    var board = null;
+    var gameHistory = []; 
+    var sanHistory = []; 
+    var currentMoveIndex = 0;
 
-
+    var workerPool = [];
+    var SEARCH_DEPTH = 12;
 </script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-<script src="/static/js/analysis_client.js"></script>
+<script src="{{ url_for('static', filename='js/games-manager.js') }}"></script>
+<script src="{{ url_for('static', filename='js/board-ui.js') }}"></script>
+<script src="{{ url_for('static', filename='js/engine-analysis.js') }}"></script>
 
 {% endblock %}

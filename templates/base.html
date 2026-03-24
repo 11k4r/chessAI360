@@ -32,11 +32,14 @@
             </div>
             
             <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div class="hidden md:flex items-center gap-12 text-sm font-bold uppercase tracking-[0.2em] text-slate-400 pointer-events-auto">
-                    <a href="/analyze-game" class="nav-link hover:text-yellow-500 transition-all duration-300">Analyze</a>
-                    <a href="/manual" class="nav-link hover:text-yellow-500 transition-all duration-300">Manual</a>
-                </div>
-            </div>
+				<div class="hidden md:flex items-center gap-12 text-sm font-bold uppercase tracking-[0.2em] text-slate-400 pointer-events-auto">
+					<a href="/analyze" class="nav-link hover:text-yellow-500 transition-all duration-300">Analyze</a>
+					
+					<a href="/player_insights" class="nav-link hover:text-yellow-500 transition-all duration-300">Player Insights</a>
+					
+					<a href="/manual" class="nav-link hover:text-yellow-500 transition-all duration-300">Manual</a>
+				</div>
+			</div>
 
             <div class="w-24 h-10 flex-shrink-0 hidden md:block"></div>
         </div>
@@ -81,7 +84,7 @@
                 main.innerHTML = '';
                 main.innerHTML = newContent;
                 
-                // --- SCRIPT RELOADING LOGIC (Your Fix) ---
+                // --- SCRIPT RELOADING LOGIC ---
                 const scripts = main.querySelectorAll('script');
                 for (const oldScript of scripts) {
                     const newScript = document.createElement('script');
@@ -90,14 +93,7 @@
                     if (oldScript.src) {
                         newScript.src = oldScript.src;
                     } else {
-                        // Scope inline scripts and expose specific functions to window
-                        const wrappedCode = `(function() {
-                            ${oldScript.innerHTML}
-                            if (typeof handleSearch === 'function') window.handleSearch = handleSearch;
-                            if (typeof setupObserver === 'function') window.setupObserver = setupObserver;
-                            if (typeof initStockfish === 'function') window.initStockfish = initStockfish;
-                        })();`;
-                        newScript.appendChild(document.createTextNode(wrappedCode));
+                        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
                     }
                     oldScript.parentNode.replaceChild(newScript, oldScript);
                 }
