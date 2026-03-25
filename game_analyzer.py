@@ -139,11 +139,26 @@ def analyze_game(data, opening_book=None, client=None, user_side='white', includ
         # 5. SCALE SHAP SCORES FOR UI
         # ---------------------------------------------------------
         ui_scores = {}
+
+        SENSITIVITY = 10.0 
+        
         for cat in ["Material", "Pawn_Structure", "King_Safety", "Center_Control", "Activity", "Mobility", "Space", "Harmony", "Attack", "Defence"]:
+            # 1. Get the raw SHAP values (keeping the negative penalties!)
+            w_raw = ai_scores[cat]["White"]
+            b_raw = ai_scores[cat]["Black"]
+            
+
+            net_white_advantage = w_raw - b_raw 
+            
+
+            w_norm = 1.0 / (1.0 + math.exp(-SENSITIVITY * net_white_advantage))
+            b_norm = 1.0 - w_norm
+            
             ui_scores[cat.lower()] = {
-                "white": round(max(0, ai_scores[cat]["White"]) * 1000, 1),
-                "black": round(max(0, ai_scores[cat]["Black"]) * 1000, 1)
+                "white": round(w_norm, 3),
+                "black": round(b_norm, 3)
             }
+
 
         if include_description:
             desc = "Game starting position." if i == 0 else ""
