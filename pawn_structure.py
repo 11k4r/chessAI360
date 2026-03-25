@@ -37,11 +37,14 @@ class PawnStructureExtractor:
         for f in int_features:
             self.features[f] = {"white": 0, "black": 0}
 
+
     def extract_all(self) -> dict:
         """Main execution method to extract and return all features."""
         self._extract_base_and_passed()
         self._extract_connectivity_and_complex()
         self._extract_wings_and_dynamic()
+        self.features["is_gonna_promote_first"] = self._calculate_promotion_race()
+        
         return self.features
 
     # --- Helper Methods ---
@@ -344,3 +347,90 @@ class PawnStructureExtractor:
 
             if self.board.has_legal_en_passant() and self.board.turn == color:
                 self.features["en_passant"][color_key] = True
+
+            
+
+
+    def _calculate_promotion_race(self):
+        """
+        Determines if a side has an unstoppable passed pawn that will promote 
+        before the opponent's passed pawns.
+        Returns: {"white": 1, "black": 0} or vice versa, or 0s for both.
+        """
+        def get_passed_pawns(color):
+            passed_pawns = []
+            pawns = self.board.pieces(chess.PAWN, color)
+            enemy_pawns = self.board.pieces(chess.PAWN, not color)
+            
+            for sq in pawns:
+                file_sq = chess.square_file(sq)
+                rank_sq = chess.square_rank(sq)
+                
+                is_passed = True
+                for enemy_sq in enemy_pawns:
+                    e_file = chess.square_file(enemy_sq)
+                    e_rank = chess.square_rank(enemy_sq)
+                    # Enemy pawn is in front and on the same or adjacent file
+                    if abs(e_file - file_sq) <= 1:
+                        if (color == chess.WHITE and e_rank > rank_sq) or \
+                           (color == chess.BLACK and e_rank < rank_sq):
+                            is_passed = False
+                            break
+                if is_passed:
+                    passed_pawns.append(sq)
+            return passed_pawns
+
+        def can_king_catch(pawn_sq, pawn_color):
+            pawn_rank = chess.square_rank(pawn_sq)
+            pawn_file = chess.square_file(pawn_sq)
+            
+            enemy_king_sq = self.board.king(not pawn_color)
+            if enemy_king_sq is None: 
+                return False
+                
+            king_rank = chess.square_rank(enemy_king_sq)
+            king_file = chess.square_file(enemy_king_sq)
+            
+            # Unmoved pawns can double step, shrinking their distance
+            if pawn_color == chess.WHITE and pawn_rank == 1:
+                pawn_rank = 2
+            elif pawn_color == chess.BLACK and pawn_rank == 6:
+                pawn_rank = 5
+                
+            dist_to_promote = 7 - pawn_rank if pawn_color == chess.WHITE else pawn_rank
+            
+            # The square distance the king needs to travel
+            king_dist_file = abs(king_file - pawn_file)
+            king_dist_rank = abs(king_rank - (7 if pawn_color == chess.WHITE else 0))
+            king_dist = max(king_dist_file, king_dist_rank)
+            
+            # If it's the pawn's turn, the pawn shrinks the square before the king moves
+            if pawn_color == self.board.turn:
+                dist_to_promote -= 1
+                
+            return king_dist <= dist_to_promote
+
+        w_passed = get_passed_pawns(chess.WHITE)
+        b_passed = get_passed_pawns(chess.BLACK)
+        
+        # Filter out pawns that the enemy king can catch
+        w_unstoppable = [sq for sq in w_passed if not can_king_catch(sq, chess.WHITE)]
+        b_unstoppable = [sq for sq in b_passed if not can_king_catch(sq, chess.BLACK)]
+        
+        # Calculate steps to promote for the fastest passer
+        w_min_dist = min([7 - chess.square_rank(sq) for sq in w_unstoppable]) if w_unstoppable else 99
+        b_min_dist = min([chess.square_rank(sq) for sq in b_unstoppable]) if b_unstoppable else 99
+        
+        # No unstoppable passers for either side
+        if w_min_dist == 99 and b_min_dist == 99:
+            return {"white": 0, "black": 0}
+            
+        # Tempo calculation: The side whose turn it is wins ties in the race
+        if self.board.turn == chess.WHITE:
+            w_wins = w_min_dist <= b_min_dist
+            b_wins = b_min_dist < w_min_dist
+        else:
+            b_wins = b_min_dist <= w_min_dist
+            w_wins = w_min_dist < b_min_dist
+            
+        return {"white": int(w_wins), "black": int(b_wins)}

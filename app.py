@@ -10,7 +10,8 @@ from groq import Groq
 from game_analyzer import analyze_game
 from card_generator import generate_player_card
 from helpers import load_opening_books
-from ChessEvaluationWrapper import ChessEvaluationWrapper
+from StaticChessEvaluator import StaticChessEvaluator
+
 
 mimetypes.add_type('application/wasm', '.wasm')
 
@@ -24,10 +25,7 @@ client = Groq(api_key=my_api_key)
 
 opening_book = load_opening_books(app.config.get('OPENINGS'))
 
-AI_EVALUATOR = ChessEvaluationWrapper(
-    model_path="models/chess_evaluator_model.json", 
-    columns_path="models/model_columns.json"
-)
+evaluator = StaticChessEvaluator()
 
 
 @app.route('/')
@@ -57,7 +55,7 @@ def process_analysis_data():
     #     json.dump(data, f, indent=4)
 
     user_side = data.get('user_side', 'white')
-    analysis_results = analyze_game(data, opening_book, client, user_side, evaluator=AI_EVALUATOR)
+    analysis_results = analyze_game(data, opening_book, client, user_side, evaluator=evaluator)
     
     return jsonify(analysis_results)
 

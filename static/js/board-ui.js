@@ -91,7 +91,7 @@ function updateBoard() {
             // Move Accuracy
             let accuracyText = '-';
             if (metrics.move_accuracy && currentMoveIndex !== 0) {
-                accuracyText = (metrics.move_accuracy * 100).toFixed(1) + '%';
+                accuracyText = (metrics.move_accuracy).toFixed(1) + '%';
             } else if (currentMoveIndex === 0) {
                 accuracyText = '0%';
             }
@@ -804,6 +804,11 @@ function updateExpandedGameMetrics() {
     // 1. Overview
     document.getElementById('game-exp-type').innerText = gm["Game Type"] || '-';
     document.getElementById('game-exp-volatility').innerText = gm.volatility ? gm.volatility.toFixed(2) : '-';
+	
+	if (gm.accuracy) {
+        document.getElementById('game-exp-acc-w').innerText = `${gm.accuracy.white || 0}%`;
+        document.getElementById('game-exp-acc-b').innerText = `${gm.accuracy.black || 0}%`;
+    }
 
     // 2. Phase Accuracies & Missed Opportunities
     const phases = [
