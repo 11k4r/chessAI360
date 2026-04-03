@@ -7,7 +7,7 @@ import mimetypes
 from groq import Groq
 from authlib.integrations.flask_client import OAuth 
 from flask_sqlalchemy import SQLAlchemy
-
+from werkzeug.middleware.proxy_fix import ProxyFix
 from game_analyzer import analyze_game
 from helpers import load_opening_books
 from StaticChessEvaluator import StaticChessEvaluator
@@ -28,6 +28,8 @@ if db_url.startswith("postgres://"):
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # Define the User Table
 class User(db.Model):
