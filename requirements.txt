@@ -1,3 +1,11 @@
+Flask
+Flask-SQLAlchemy
+Authlib
+requests
+groq
+chess 
+
+# The production additions:
 gunicorn==21.2.0
 psycopg2-binary==2.9.9
 Werkzeug>=2.3.0
