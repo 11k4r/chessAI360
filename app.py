@@ -57,11 +57,9 @@ class PlayerInsights(db.Model):
 with app.app_context():
     db.create_all()
 
-client = Groq(api_key=my_api_key)
-
-opening_book = load_opening_books(app.config.get('OPENINGS'))
-
-evaluator = StaticChessEvaluator()
+app.groq_client = Groq(api_key=my_api_key) # Assuming my_api_key is defined
+app.opening_book = load_opening_books(app.config.get('OPENINGS'))
+app.evaluator = StaticChessEvaluator()
 
 oauth = OAuth(app)
 google = oauth.register(
@@ -170,7 +168,13 @@ def process_analysis_data():
     #     json.dump(data, f, indent=4)
 
     user_side = data.get('user_side', 'white')
-    analysis_results = analyze_game(data, opening_book, client, user_side, evaluator=evaluator)
+    analysis_results = analyze_game(
+        data=data, 
+        opening_book=current_app.opening_book, 
+        client=current_app.groq_client, 
+        user_side=user_side, 
+        evaluator=current_app.evaluator
+    )
     
     return jsonify(analysis_results)
 
@@ -219,9 +223,9 @@ def analyze_batch():
     
     batch_metrics = process_insights_batch(
         data=data, 
-        opening_book=opening_book, 
-        client=client, 
-        evaluator=evaluator
+        opening_book=current_app.opening_book, 
+        client=current_app.groq_client, 
+        evaluator=current_app.evaluator
     )
     
     return jsonify(batch_metrics)
