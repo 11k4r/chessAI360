@@ -111,6 +111,7 @@ def logout():
     return redirect('/')
 # -----------------------
 
+# --- UPDATED PROFILE ROUTE ---
 @app.route('/profile', methods=['GET', 'POST'])
 def profile():
     # Ensure they are logged in
@@ -119,12 +120,6 @@ def profile():
         
     # Fetch the user directly from the database
     user = User.query.get(session['user_id'])
-    
-    # ---> ADD THIS CHECK <---
-    # If the user ID is in the session but not in the DB (stale cookie)
-    if not user:
-        session.clear()  # Clear the invalid session
-        return redirect('/login')
         
     if request.method == 'POST':
         # Update the database with the form submissions
