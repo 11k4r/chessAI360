@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, current_app
 from config import Config 
 import json     
 import datetime 
@@ -8,10 +8,6 @@ from groq import Groq
 from authlib.integrations.flask_client import OAuth 
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.middleware.proxy_fix import ProxyFix
-from game_analyzer import analyze_game
-from helpers import load_opening_books
-from StaticChessEvaluator import StaticChessEvaluator
-from player_insights import process_insights_batch
 
 from game_analyzer import analyze_game
 from helpers import load_opening_books
@@ -57,9 +53,19 @@ class PlayerInsights(db.Model):
 with app.app_context():
     db.create_all()
 
-app.groq_client = Groq(api_key=my_api_key) # Assuming my_api_key is defined
-app.opening_book = load_opening_books(app.config.get('OPENINGS'))
+# ---------------------------------------------------------
+# ATTACH RESOURCES DIRECTLY TO THE APP OBJECT
+# This prevents Gunicorn workers from losing track of globals
+# ---------------------------------------------------------
+
+# Retrieve the API key from environment variables safely
+my_api_key = os.environ.get('GROQ_API_KEY', 'your_fallback_key_here')
+
+app.groq_client = Groq(api_key=my_api_key)
+app.opening_book = load_opening_books(app.config.get('OPENINGS', 'openings'))
 app.evaluator = StaticChessEvaluator()
+
+# ---------------------------------------------------------
 
 oauth = OAuth(app)
 google = oauth.register(
@@ -107,7 +113,6 @@ def logout():
     session.pop('user', None)
     session.pop('user_id', None)
     return redirect('/')
-# -----------------------
 
 # --- UPDATED PROFILE ROUTE ---
 @app.route('/profile', methods=['GET', 'POST'])
@@ -131,15 +136,12 @@ def profile():
     return render_template('profile.html', site_name=app.config['SITE_NAME'], db_user=user)
 
 
-
 @app.route('/')
 def index():
     return render_template('index.html', 
                            site_name=app.config['SITE_NAME'], # Accessed via app.config
                            tagline="Push Chess Forward",
                            sub_tagline="Go beyond the evaluation bar and decode your chess DNA. Use AI to measure key metrics such as harmony, mobility, pawn structure, and time management. Seamlessly sync with Chess.com and Lichess to transform your game history into a comprehensive player profile.")
-
-
 
     
 @app.route('/analyze')
@@ -159,13 +161,17 @@ def analyze():
 def process_analysis_data():
     data = request.get_json()
     
+    # 1. Save the JSON data locally
     os.makedirs('data', exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"data/analysis_{timestamp}.json"
+    
+    # with open(filename, 'w') as f:
+    #     json.dump(data, f, indent=4)
 
     user_side = data.get('user_side', 'white')
     
-    # FETCH variables from current_app here!
+    # Call to analyze_game using the resources safely anchored to current_app
     analysis_results = analyze_game(
         data=data, 
         opening_book=current_app.opening_book, 
@@ -211,15 +217,14 @@ def player_card():
                            can_sync=can_sync,
                            time_until_sync=time_until_sync,
                            stats_data=stats_data or {},
-                           db_user=user) # <-- ADD THIS LINE
-
+                           db_user=user)
 
 
 @app.route('/api/analyze-batch', methods=['POST'])
 def analyze_batch():
     data = request.get_json()
     
-    # FETCH variables from current_app here!
+    # Call to process_insights_batch using the resources safely anchored to current_app
     batch_metrics = process_insights_batch(
         data=data, 
         opening_book=current_app.opening_book, 
