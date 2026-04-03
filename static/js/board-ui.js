@@ -834,14 +834,13 @@ function updateExpandedGameMetrics() {
     
     traits.forEach(trait => {
         if (gm[trait]) {
-            let w = gm[trait].white || 0;
-            let b = gm[trait].black || 0;
+            // Re-added the missing calculations for the bars
+            const w = gm[trait].white || 0;
+            const b = gm[trait].black || 0;
+            const total = w + b;
             
-            // Calculate proportional width (out of total 100% combined, or max 100 each mapped to 50/50)
-            let total = w + b;
             let wPct = 50;
             let bPct = 50;
-            
             if (total > 0) {
                 wPct = (w / total) * 100;
                 bPct = (b / total) * 100;
@@ -849,9 +848,8 @@ function updateExpandedGameMetrics() {
 
             const wBar = document.getElementById(`game-bar-${trait}-w`);
             const bBar = document.getElementById(`game-bar-${trait}-b`);
-            
+
             if (wBar && bBar) {
-                // Set the width and title
                 wBar.style.width = `${wPct}%`;
                 wBar.title = `White: ${w}`;
                 bBar.style.width = `${bPct}%`;

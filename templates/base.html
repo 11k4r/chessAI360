@@ -41,7 +41,32 @@
 				</div>
 			</div>
 
-            <div class="w-24 h-10 flex-shrink-0 hidden md:block"></div>
+            <div class="hidden md:flex flex-shrink-0 items-center gap-4 z-50">
+				{% if session.get('user') %}
+					<div class="relative group cursor-pointer">
+						
+						<div class="flex items-center gap-3 bg-black/20 pr-4 pl-1 py-1 rounded-full border border-white/5 shadow-inner hover:bg-white/5 transition-colors">
+							<img src="{{ session['user'].picture }}" alt="Profile" class="w-8 h-8 rounded-full border border-yellow-500">
+							<span class="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">{{ session['user'].given_name }}</span>
+							<i class="fa-solid fa-chevron-down text-[10px] text-slate-500 group-hover:text-white transition-colors ml-1"></i>
+						</div>
+
+						<div class="absolute right-0 top-full mt-2 w-48 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform scale-95 group-hover:scale-100 origin-top-right flex flex-col overflow-hidden z-50">
+							<a href="/profile" class="nav-link px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white border-b border-slate-700 transition-colors flex items-center gap-3 font-medium">
+								<i class="fa-solid fa-user-edit text-slate-500 w-4"></i> Edit Profile
+							</a>
+							<a href="/logout" class="px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-3 font-medium">
+								<i class="fa-solid fa-sign-out-alt w-4"></i> Logout
+							</a>
+						</div>
+						
+					</div>
+				{% else %}
+					<a href="/login" class="nav-link flex items-center justify-center bg-white/5 hover:bg-white/10 text-white border border-white/10 px-6 py-2 rounded-xl text-sm font-bold transition-all duration-300 shadow-lg">
+						Login
+					</a>
+				{% endif %}
+			</div>
         </div>
     </nav>
 

@@ -154,4 +154,4 @@ nav {
     
     /* Card Decorations */
     .royal-decor-top { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 80%; height: 1px; background: linear-gradient(90deg, transparent, var(--text-accent), transparent); z-index: 5; }
-    .royal-decor-bottom { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 80%; height: 1px; background: linear-gradient(90deg, transparent, var(--text-accent), transparent); z-index: 5; }
+    .royal-decor-bottom { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 80%; height: 1px; background: linear-gradient(90deg, transparent, var(--text-accent), transparent); z-index: 5; }        

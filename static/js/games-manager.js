@@ -1,15 +1,90 @@
-async function fetchGames() {
-    const username = document.getElementById('username-input').value.trim();
+// ADD forceRefresh = false
+async function fetchGames(directUsername = null, forceRefresh = false) {
+    const inputField = document.getElementById('username-input');
+    const username = directUsername || (inputField ? inputField.value.trim() : '');
+
+    if (!username) return;
+
+    // Safety Sync: Instantly memorize the username for the active tab
+    if (currentPlatform === 'chesscom') {
+        window.typedChesscom = username;
+    } else if (currentPlatform === 'lichess') {
+        window.typedLichess = username;
+    }
+
+    if (inputField) {
+        inputField.value = username;
+    }
+
+    let isMyProfile = false;
+    if (typeof savedChesscom !== 'undefined' || typeof savedLichess !== 'undefined') {
+        const checkChesscom = typeof savedChesscom !== 'undefined' && savedChesscom && savedChesscom !== "None" && username.toLowerCase() === savedChesscom.toLowerCase();
+        const checkLichess = typeof savedLichess !== 'undefined' && savedLichess && savedLichess !== "None" && username.toLowerCase() === savedLichess.toLowerCase();
+        
+        if (currentPlatform === 'chesscom' && checkChesscom) isMyProfile = true;
+        if (currentPlatform === 'lichess' && checkLichess) isMyProfile = true;
+    }
+
+    const quickSwitchContainer = document.getElementById('quick-switch-container');
+    const myGamesBtn = document.getElementById('my-games-btn');
+
+    if (quickSwitchContainer && myGamesBtn) {
+        if (isMyProfile) {
+            quickSwitchContainer.style.display = ''; 
+            myGamesBtn.style.display = 'none'; 
+
+            const quickChesscom = document.getElementById('quick-chesscom');
+            const quickLichess = document.getElementById('quick-lichess');
+            if (quickChesscom && quickLichess) {
+                if (currentPlatform === 'chesscom') {
+                    quickChesscom.classList.add('bg-yellow-500/20', 'text-yellow-500');
+                    quickChesscom.classList.remove('text-slate-500');
+                    quickLichess.classList.remove('bg-yellow-500/20', 'text-yellow-500');
+                    quickLichess.classList.add('text-slate-500');
+                } else {
+                    quickLichess.classList.add('bg-yellow-500/20', 'text-yellow-500');
+                    quickLichess.classList.remove('text-slate-500');
+                    quickChesscom.classList.remove('bg-yellow-500/20', 'text-yellow-500');
+                    quickChesscom.classList.add('text-slate-500');
+                }
+            }
+        } else {
+            quickSwitchContainer.style.display = 'none'; 
+            myGamesBtn.style.display = 'flex'; 
+        }
+    }
+
+    // ==========================================
+    // CACHE INTERCEPTOR
+    // ==========================================
+    if (!forceRefresh && typeof savedPlatformData !== 'undefined' && savedPlatformData[currentPlatform] && savedPlatformData[currentPlatform].username.toLowerCase() === username.toLowerCase()) {
+        const cache = savedPlatformData[currentPlatform];
+        
+        // Restore state from memory
+        allGamesCache = cache.allGamesCache;
+        availableArchives = cache.availableArchives;
+        archiveIndex = cache.archiveIndex;
+        currentUserCache = cache.currentUserCache;
+        
+        // Swap UI instantly
+        document.getElementById('import-view').classList.add('hidden');
+        document.getElementById('games-list-view').classList.remove('hidden');
+        document.getElementById('main-header').classList.add('hidden');
+        
+        // Render from memory and exit function
+        refreshGameList();
+        return;
+    }
+    // ==========================================
+
     const btn = document.getElementById('fetch-btn');
     const btnText = document.getElementById('btn-text');
     const loader = document.getElementById('btn-loader');
     const errorDiv = document.getElementById('error-msg');
 
-    if (!username) return;
-
     // Reset State
     allGamesCache = [];
-    currentGamesList = []; 
+    currentGamesList = [];
     availableArchives = [];
     archiveIndex = 0;
     currentOffset = 0;
@@ -75,6 +150,18 @@ async function fetchGames() {
 
         if (allGamesCache.length === 0) throw new Error('No games found in recent history.');
         
+        // --- SAVE NEW SEARCH TO CACHE ---
+        if (typeof savedPlatformData !== 'undefined') {
+            savedPlatformData[currentPlatform] = {
+                username: username,
+                allGamesCache: [...allGamesCache],
+                availableArchives: [...availableArchives],
+                archiveIndex: archiveIndex,
+                currentUserCache: currentUserCache
+            };
+        }
+        // --------------------------------
+
         document.getElementById('import-view').classList.add('hidden');
         document.getElementById('games-list-view').classList.remove('hidden');
         document.getElementById('main-header').classList.add('hidden'); 
@@ -84,6 +171,12 @@ async function fetchGames() {
     } catch (err) {
         errorDiv.innerText = err.message;
         errorDiv.classList.remove('hidden');
+        
+        document.getElementById('dashboard-view').classList.add('hidden');
+        document.getElementById('games-list-view').classList.add('hidden');
+        document.getElementById('import-view').classList.remove('hidden');
+        document.getElementById('main-header').classList.remove('hidden');
+        
     } finally {
         resetBtn();
     }
@@ -101,6 +194,13 @@ async function fetchNextMonth() {
     const newGames = data.games.reverse();
     
     allGamesCache = allGamesCache.concat(newGames);
+    
+    // Keep the cache continuously updated as you scroll back in time
+    if (typeof savedPlatformData !== 'undefined' && savedPlatformData['chesscom']) {
+        savedPlatformData['chesscom'].allGamesCache = [...allGamesCache];
+        savedPlatformData['chesscom'].archiveIndex = archiveIndex;
+    }
+    
     return true; 
 }
 

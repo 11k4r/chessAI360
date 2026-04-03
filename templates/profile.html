@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="w-full min-h-screen px-4 py-6">
+    
+    <div class="text-center mb-12 mt-10">
+        <h1 class="text-4xl font-extrabold text-white mb-4">Edit Profile</h1>
+        <p class="text-slate-400">Link your chess accounts for quicker analysis</p>
+    </div>
+
+    <div class="glass-panel p-8 rounded-2xl max-w-lg mx-auto transition-all duration-300 shadow-2xl">
+        
+        <div class="flex items-center gap-4 mb-8 border-b border-white/10 pb-6">
+            <img src="{{ session['user'].picture }}" alt="Profile" class="w-16 h-16 rounded-full border-2 border-yellow-500 shadow-lg shadow-yellow-500/20">
+            <div>
+                <h2 class="text-xl font-bold text-white">{{ session['user'].given_name }} {{ session['user'].family_name }}</h2>
+                <p class="text-sm text-slate-400">{{ session['user'].email }}</p>
+            </div>
+        </div>
+
+        <form action="/profile" method="POST" class="space-y-6">
+            
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center">
+                    <i class="fa-solid fa-chess-pawn text-yellow-500 mr-2"></i> Chess.com Username
+                </label>
+                <input type="text" name="chesscom_username" 
+				   value="{{ db_user.chesscom_username }}"
+				   class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-all placeholder-slate-600"
+				   placeholder="e.g. MagnusCarlsen">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center">
+                    <i class="fa-solid fa-horse-head text-slate-400 mr-2"></i> Lichess Username
+                </label>
+                <input type="text" name="lichess_username" 
+				   value="{{ db_user.lichess_username }}"
+				   class="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all placeholder-slate-600"
+				   placeholder="e.g. DrNykterstein">
+            </div>
+
+            <button type="submit" 
+                    class="w-full mt-4 bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-3 rounded-xl transition-all transform active:scale-95 shadow-lg shadow-yellow-500/20">
+                Save Changes
+            </button>
+            
+        </form>
+    </div>
+</div>
+{% endblock %}

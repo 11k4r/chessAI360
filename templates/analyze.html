@@ -30,11 +30,11 @@
                        placeholder="e.g. MagnusCarlsen">
             </div>
 
-            <button onclick="fetchGames()" id="fetch-btn" 
-                    class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-3 rounded-xl transition-all transform active:scale-95 shadow-lg shadow-yellow-500/20">
-                <span id="btn-text">Find Games</span>
-                <i id="btn-loader" class="fa-solid fa-circle-notch fa-spin hidden ml-2"></i>
-            </button>
+            <button onclick="fetchGames(null, true)" id="fetch-btn" 
+					class="w-full bg-yellow-500 hover:bg-yellow-400 text-slate-900 font-bold py-3 rounded-xl transition-all transform active:scale-95 shadow-lg shadow-yellow-500/20">
+				<span id="btn-text">Find Games</span>
+				<i id="btn-loader" class="fa-solid fa-circle-notch fa-spin hidden ml-2"></i>
+			</button>
 
             <div id="error-msg" class="hidden text-red-400 text-sm text-center bg-red-400/10 p-3 rounded-lg border border-red-400/20"></div>
         </div>
@@ -63,11 +63,25 @@
 		</div>
 
 		<div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold text-white">Recent Games</h2>
-            <button onclick="resetView()" class="text-xs text-slate-400 hover:text-white uppercase tracking-wider font-bold">
-                <i class="fa-solid fa-arrow-left mr-1"></i> Search Again
-            </button>
-        </div>
+			<div class="flex items-center gap-4">
+				<h2 class="text-xl font-bold text-white">Recent Games</h2>
+				
+				{% if db_user and (db_user.chesscom_username or db_user.lichess_username) %}
+				<div id="quick-switch-container" class="hidden md:flex bg-slate-800/50 rounded-lg p-1 border border-white/5 shadow-inner transition-all">
+					<button id="quick-chesscom" onclick="quickSwitchPlatform('chesscom')" class="px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all {{ 'bg-yellow-500/20 text-yellow-500 shadow-sm' if db_user.chesscom_username else 'text-slate-500 hover:text-white' }}">Chess.com</button>
+					<button id="quick-lichess" onclick="quickSwitchPlatform('lichess')" class="px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all {{ 'bg-yellow-500/20 text-yellow-500 shadow-sm' if not db_user.chesscom_username and db_user.lichess_username else 'text-slate-500 hover:text-white' }}">Lichess</button>
+				</div>
+
+				<button id="my-games-btn" onclick="loadMyGames()" class="hidden bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 px-4 py-1.5 rounded-lg border border-yellow-500/30 text-[10px] font-bold uppercase tracking-wider transition-all shadow-sm items-center">
+					<i class="fa-solid fa-house-user mr-2"></i> My Games
+				</button>
+				{% endif %}
+			</div>
+			
+			<button onclick="resetView(true)" class="text-[10px] text-slate-300 hover:text-white uppercase tracking-wider font-bold bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg border border-white/10 transition-colors flex items-center shadow-lg">
+				<i class="fa-solid fa-magnifying-glass mr-2"></i> Manual Search
+			</button>
+		</div>
 
         <div id="games-container" class="grid gap-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2 pb-2">
             </div>
@@ -78,18 +92,18 @@
 
     </div>
 	
-	<div id="dashboard-view" class="hidden animate-fade-in h-[85vh] w-full max-w-[1800px] mx-auto">
+	<div id="dashboard-view" class="hidden animate-fade-in h-[calc(100vh-2rem)] w-full max-w-[1800px] mx-auto flex flex-col">
     
-        <div class="flex items-center justify-between mb-4 h-[5%]">
+        <div class="flex items-center justify-between mb-4 flex-none">
             <button onclick="backToGamesList()" class="text-slate-400 hover:text-white font-bold uppercase text-xs tracking-wider transition-colors">
 				<i class="fa-solid fa-arrow-left mr-2"></i> Back to Games
 			</button>
             <h2 class="text-xl font-bold text-white">Analysis Board</h2>
         </div>
     
-        <div class="flex flex-row gap-6 h-[95%] items-stretch">
+        <div class="flex flex-col lg:flex-row gap-6 flex-1 items-stretch min-h-0">
             
-            <div class="flex flex-col w-[75vh] min-w-[500px] gap-2">
+            <div class="flex flex-col w-full lg:w-[70vh] max-w-[800px] shrink-0 gap-2">
                 
                 <div class="flex justify-end gap-2 h-8 flex-none">
                     <div id="time-control-box" class="flex items-center justify-center px-4 rounded-md bg-slate-800 border border-slate-700 font-bold text-xs uppercase tracking-wider text-slate-400">-</div>
@@ -113,7 +127,7 @@
                     <div id="loader-text" class="text-white font-bold text-xl tracking-widest uppercase animate-pulse">Initializing...</div>
                     <div class="mt-2 text-slate-500 text-xs font-mono">Please wait...</div>
                 </div>
-			<div id="analysis-content" class="flex flex-col h-full min-h-0 w-full opacity-0 transition-opacity duration-700 p-2 gap-4">
+			<div id="analysis-content" class="flex flex-col h-full min-h-0 w-full opacity-0 transition-opacity duration-700 p-2 gap-4 overflow-y-auto custom-scrollbar">
 
 				<div id="move-stats-row" class="glass-panel p-3 rounded-xl border border-white/10 flex-none shadow-lg flex gap-2 h-20">
 					<div class="flex-1 bg-black/30 rounded-lg p-2 text-center border border-white/5 flex flex-col justify-center overflow-hidden">
@@ -146,7 +160,7 @@
 					</div>
 				</div>
 
-				<div id="unified-analysis-panel" class="w-full h-full glass-panel p-4 rounded-xl border border-white/10 shadow-lg flex flex-col bg-black/20 animate-fade-in">
+				<div id="unified-analysis-panel" class="w-full flex-1 min-h-0 glass-panel p-4 rounded-xl border border-white/10 shadow-lg flex flex-col bg-black/20 animate-fade-in">
 					
 					<div class="flex justify-start items-center mb-4 flex-none border-b border-white/10 pb-2 gap-6">
 						<button id="tab-btn-position" onclick="switchAnalysisTab('position', true)" class="text-yellow-500 uppercase tracking-widest text-sm font-bold border-b-2 border-yellow-500 pb-1 transition-colors">
@@ -159,7 +173,7 @@
 
 					<div id="expanded-position" class="flex-1 overflow-hidden flex flex-col">
 						<div id="position-analysis-expanded" class="flex-1 overflow-y-auto custom-scrollbar pr-2">
-							<div class="grid grid-cols-3 gap-8 h-full">
+							<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 h-full">
 								<div class="flex flex-col gap-4 border-r border-white/5 pr-6 h-full">
 									<div class="flex flex-col justify-between flex-none h-[160px] mb-2">
 										<div class="h-12 flex flex-col justify-center">
@@ -283,7 +297,7 @@
 								</div>
 							</div>
 
-							<div class="grid grid-cols-2 gap-6">
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 								<div class="space-y-4">
 										<h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-white/10 pb-2">Phase Accuracy</h4>
 										
@@ -525,6 +539,141 @@
 
     var workerPool = [];
     var SEARCH_DEPTH = 12;
+	
+	
+	var savedPlatformData = { 'chesscom': null, 'lichess': null };
+	var savedChesscom = "{{ db_user.chesscom_username if db_user and db_user.chesscom_username else '' }}";
+    var savedLichess = "{{ db_user.lichess_username if db_user and db_user.lichess_username else '' }}";
+    var isLoggedIn = {{ 'true' if db_user else 'false' }};
+	
+</script>
+
+
+<script>
+
+
+    // Use the window object so the SPA router doesn't crash on reload
+    window.typedChesscom = window.typedChesscom || "";
+    window.typedLichess = window.typedLichess || "";
+
+    function setPlatform(platform) {
+        const btnChesscom = document.getElementById('btn-chesscom');
+        const btnLichess = document.getElementById('btn-lichess');
+        const input = document.getElementById('username-input');
+
+        // 1. Save current input to the window object before switching
+        if (input) {
+            if (currentPlatform === 'chesscom') {
+                window.typedChesscom = input.value;
+            } else if (currentPlatform === 'lichess') {
+                window.typedLichess = input.value;
+            }
+        }
+
+        // 2. Set the new active platform
+        currentPlatform = platform;
+        
+        // 3. Update the UI and restore the correct username
+        if (platform === 'chesscom') {
+            if(btnChesscom) btnChesscom.className = "flex-1 pb-2 text-yellow-500 border-b-2 border-yellow-500 font-bold text-sm uppercase tracking-wider transition-all";
+            if(btnLichess) btnLichess.className = "flex-1 pb-2 text-slate-600 font-bold text-sm uppercase tracking-wider hover:text-slate-400 transition-all";
+            
+            if (input) {
+                if (window.typedChesscom !== "") {
+                    input.value = window.typedChesscom;
+                } else if (typeof isLoggedIn !== 'undefined' && isLoggedIn && typeof savedChesscom !== 'undefined' && savedChesscom && savedChesscom !== "None") {
+                    input.value = savedChesscom;
+                } else {
+                    input.value = ""; // Force clear
+                }
+            }
+        } else {
+            if(btnLichess) btnLichess.className = "flex-1 pb-2 text-yellow-500 border-b-2 border-yellow-500 font-bold text-sm uppercase tracking-wider transition-all";
+            if(btnChesscom) btnChesscom.className = "flex-1 pb-2 text-slate-600 font-bold text-sm uppercase tracking-wider hover:text-slate-400 transition-all";
+            
+            if (input) {
+                if (window.typedLichess !== "") {
+                    input.value = window.typedLichess;
+                } else if (typeof isLoggedIn !== 'undefined' && isLoggedIn && typeof savedLichess !== 'undefined' && savedLichess && savedLichess !== "None") {
+                    input.value = savedLichess;
+                } else {
+                    input.value = ""; // Force clear to completely stop the bleed
+                }
+            }
+        }
+    }
+
+    // Auto-fetch on load (Works with the base.html SPA router)
+    (function autoInit() {
+        if (typeof isLoggedIn !== 'undefined' && isLoggedIn) {
+            let shouldAutoFetch = false;
+            
+            if (savedChesscom) {
+                setPlatform('chesscom');
+                shouldAutoFetch = true;
+            } else if (savedLichess) {
+                setPlatform('lichess');
+                shouldAutoFetch = true;
+            }
+            
+            if (shouldAutoFetch) {
+                setTimeout(() => fetchGames(), 150);
+            }
+        }
+    })();
+
+    // Switches between profiles directly from the games list view
+    function quickSwitchPlatform(platform) {
+        if (platform === 'chesscom' && savedChesscom) {
+            setPlatform('chesscom');
+            document.getElementById('quick-chesscom').classList.add('bg-yellow-500/20', 'text-yellow-500');
+            document.getElementById('quick-lichess').classList.remove('bg-yellow-500/20', 'text-yellow-500');
+            document.getElementById('quick-lichess').classList.add('text-slate-500');
+            
+            // Pass the username directly, and FALSE for forceRefresh
+            fetchGames(savedChesscom, false); 
+            
+        } else if (platform === 'lichess' && savedLichess) {
+            setPlatform('lichess');
+            document.getElementById('quick-lichess').classList.add('bg-yellow-500/20', 'text-yellow-500');
+            document.getElementById('quick-chesscom').classList.remove('bg-yellow-500/20', 'text-yellow-500');
+            document.getElementById('quick-chesscom').classList.add('text-slate-500');
+            
+            // Pass the username directly, and FALSE for forceRefresh
+            fetchGames(savedLichess, false); 
+            
+        } else {
+            alert(`You haven't linked a ${platform} account in your profile yet.`);
+        }
+    }
+
+    // Returns to the manual search menu
+    function resetView(clearInput = false) {
+        document.getElementById('dashboard-view').classList.add('hidden');
+        document.getElementById('games-list-view').classList.add('hidden');
+        document.getElementById('import-view').classList.remove('hidden');
+        document.getElementById('main-header').classList.remove('hidden');
+        
+        if (clearInput) {
+            document.getElementById('username-input').value = '';
+        }
+    }
+	
+	// Returns the user to their own profile's games
+    function loadMyGames() {
+        // Prioritize returning to the current platform if linked, otherwise fallback
+        if (currentPlatform === 'lichess' && savedLichess && savedLichess !== "None") {
+            quickSwitchPlatform('lichess');
+        } else if (currentPlatform === 'chesscom' && savedChesscom && savedChesscom !== "None") {
+            quickSwitchPlatform('chesscom');
+        } else if (savedChesscom && savedChesscom !== "None") {
+            quickSwitchPlatform('chesscom');
+        } else if (savedLichess && savedLichess !== "None") {
+            quickSwitchPlatform('lichess');
+        } else {
+            resetView(true); // Fallback to manual search if no accounts linked
+        }
+    }
 </script>
 
 <script src="{{ url_for('static', filename='js/games-manager.js') }}"></script>
