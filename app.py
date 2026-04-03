@@ -1,17 +1,17 @@
 import os
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from config import Config 
 import json     
 import datetime 
 import mimetypes
-import os
 from groq import Groq
+from authlib.integrations.flask_client import OAuth 
+from flask_sqlalchemy import SQLAlchemy
 
 from game_analyzer import analyze_game
-from card_generator import generate_player_card
 from helpers import load_opening_books
 from StaticChessEvaluator import StaticChessEvaluator
-
+from player_insights import process_insights_batch
 
 mimetypes.add_type('application/wasm', '.wasm')
 
@@ -28,6 +28,103 @@ opening_book = load_opening_books(app.config.get('OPENINGS'))
 evaluator = StaticChessEvaluator()
 
 
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chess_dna.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# Define the User Table
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    google_id = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    name = db.Column(db.String(120))
+    chesscom_username = db.Column(db.String(120), default="")
+    lichess_username = db.Column(db.String(120), default="")
+
+class PlayerInsights(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=False)
+    last_updated = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    latest_chesscom_timestamp = db.Column(db.BigInteger, default=0)
+    latest_lichess_timestamp = db.Column(db.BigInteger, default=0)
+    stats_data = db.Column(db.JSON, nullable=True)
+
+# Create the database tables automatically before the first request
+with app.app_context():
+    db.create_all()
+
+
+oauth = OAuth(app)
+google = oauth.register(
+    name='google',
+    client_id=app.config.get('GOOGLE_CLIENT_ID'),
+    client_secret=app.config.get('GOOGLE_CLIENT_SECRET'),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={
+        'scope': 'openid email profile'
+    }
+)
+
+@app.route('/login')
+def login():
+    redirect_uri = url_for('auth_callback', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@app.route('/auth/callback')
+def auth_callback():
+    token = google.authorize_access_token()
+    user_info = token.get('userinfo')
+    
+    if user_info:
+        # 1. Check if user already exists in our database using their Google ID
+        user = User.query.filter_by(google_id=user_info['sub']).first()
+        
+        # 2. If they don't exist, create a new row for them
+        if not user:
+            user = User(
+                google_id=user_info['sub'],
+                email=user_info['email'],
+                name=user_info.get('given_name', '')
+            )
+            db.session.add(user)
+            db.session.commit()
+            
+        # 3. Store their internal database ID in the session
+        session['user_id'] = user.id
+        session['user'] = user_info # Keep this for the profile picture in the navbar
+        
+    return redirect('/')
+
+@app.route('/logout')
+def logout():
+    session.pop('user', None)
+    session.pop('user_id', None)
+    return redirect('/')
+# -----------------------
+
+# --- UPDATED PROFILE ROUTE ---
+@app.route('/profile', methods=['GET', 'POST'])
+def profile():
+    # Ensure they are logged in
+    if not session.get('user_id'):
+        return redirect('/login')
+        
+    # Fetch the user directly from the database
+    user = User.query.get(session['user_id'])
+        
+    if request.method == 'POST':
+        # Update the database with the form submissions
+        user.chesscom_username = request.form.get('chesscom_username', '').strip()
+        user.lichess_username = request.form.get('lichess_username', '').strip()
+        db.session.commit() # Save changes to the database
+        
+        return redirect('/profile')
+
+    # Pass the database user object to the template
+    return render_template('profile.html', site_name=app.config['SITE_NAME'], db_user=user)
+
+
+
 @app.route('/')
 def index():
     return render_template('index.html', 
@@ -35,11 +132,20 @@ def index():
                            tagline="Push Chess Forward",
                            sub_tagline="Go beyond the evaluation bar and decode your chess DNA. Use AI to measure key metrics such as harmony, mobility, pawn structure, and time management. Seamlessly sync with Chess.com and Lichess to transform your game history into a comprehensive player profile.")
 
+
+
+    
 @app.route('/analyze')
 def analyze():
+    # Check if the user is logged in and fetch their saved usernames
+    user = None
+    if session.get('user_id'):
+        user = User.query.get(session['user_id'])
+        
     return render_template('analyze.html', 
                            site_name=app.config['SITE_NAME'],
-                           tc_styles=app.config['TIME_CONTROL_STYLES'])
+                           tc_styles=app.config['TIME_CONTROL_STYLES'],
+                           db_user=user) # Pass the user to the template
 
 
 @app.route('/api/analyze-game', methods=['POST'])
@@ -63,48 +169,73 @@ def process_analysis_data():
 def manual():
     return render_template('manual.html', site_name=app.config['SITE_NAME'])
 
-# Add this alongside your other routes in app.py
 @app.route('/player_insights')
 def player_card():
-    return render_template('player_insights.html', 
-                           site_name=app.config['SITE_NAME'])
-
-
-@app.route('/api/analyze-insights', methods=['POST'])
-def analyze_insights():
-    data = request.get_json()
-    
-    os.makedirs('data', exist_ok=True)
-    
-    filename = "data/mock_player_insights.json"
-    
-    with open(filename, 'w') as f:
-        json.dump(data, f, indent=4)
+    if 'user_id' not in session:
+        return render_template('player_insights.html', user_logged_in=False)
         
+    user = User.query.get(session['user_id'])
+    insights = PlayerInsights.query.filter_by(user_id=user.id).first()
     
-    return jsonify({"status": "success", "message": "Mock data saved successfully!", "file": filename})
+    can_sync = True
+    time_until_sync = ""
+    stats_data = None
+
+    if insights and insights.last_updated:
+        stats_data = insights.stats_data
+        cooldown = datetime.timedelta(seconds=1) 
+        next_sync = insights.last_updated + cooldown
+        now = datetime.datetime.utcnow()
+        
+        if now < next_sync:
+            can_sync = False
+            diff = next_sync - now
+            days, seconds = diff.days, diff.seconds
+            hours = seconds // 3600
+            time_until_sync = f"{days}d {hours}h"
+
+    return render_template('player_insights.html', 
+                           site_name=app.config.get('SITE_NAME', 'Chess AI'),
+                           user_logged_in=True,
+                           can_sync=can_sync,
+                           time_until_sync=time_until_sync,
+                           stats_data=stats_data or {},
+                           db_user=user) # <-- ADD THIS LINE
+
 
 
 @app.route('/api/analyze-batch', methods=['POST'])
 def analyze_batch():
-    payload = request.get_json()
+    data = request.get_json()
     
-    # Structure the payload so the card generator knows what needs fast vs deep analysis
-    payload = {
-        "batch_platform": {
-            "batch_tc": {
-                "games": payload.get('games', []),
-                "analyzed_games": payload.get('analyzed_games', [])
-            }
-        }
-    }
+    batch_metrics = process_insights_batch(
+        data=data, 
+        opening_book=opening_book, 
+        client=client, 
+        evaluator=evaluator
+    )
     
-    try:
-        batch_metrics = generate_player_card(payload, opening_book, client)
-        return jsonify(batch_metrics)
-    except Exception as e:
-        print(f"Batch Error: {e}")
-        return jsonify({"error": str(e)}), 500
+    return jsonify(batch_metrics)
+
+
+@app.route('/api/save-insights', methods=['POST'])
+def save_insights():
+    if 'user_id' not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json()
+    user_id = session['user_id']
+    
+    insights = PlayerInsights.query.filter_by(user_id=user_id).first()
+    if not insights:
+        insights = PlayerInsights(user_id=user_id)
+        db.session.add(insights)
+
+    insights.last_updated = datetime.datetime.utcnow()
+    insights.stats_data = data.get('stats_data', {})
+    
+    db.session.commit()
+    return jsonify({"status": "success"})
 
 
 @app.after_request
