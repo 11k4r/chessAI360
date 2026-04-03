@@ -188,10 +188,20 @@ def manual():
 
 @app.route('/player_insights')
 def player_card():
+    # 1. Check if they have a session cookie at all
     if 'user_id' not in session:
         return render_template('player_insights.html', user_logged_in=False)
         
+    # 2. Look up the user in the database
     user = User.query.get(session['user_id'])
+    
+    # 3. SAFETY CHECK: If session exists but user is missing from DB (stale session)
+    if not user:
+        session.pop('user', None)
+        session.pop('user_id', None)
+        return redirect('/login')
+
+    # 4. Now it is safe to access user.id
     insights = PlayerInsights.query.filter_by(user_id=user.id).first()
     
     can_sync = True
