@@ -159,15 +159,13 @@ def analyze():
 def process_analysis_data():
     data = request.get_json()
     
-    # 1. Save the JSON data locally (same behavior as before)
     os.makedirs('data', exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"data/analysis_{timestamp}.json"
-    
-    # with open(filename, 'w') as f:
-    #     json.dump(data, f, indent=4)
 
     user_side = data.get('user_side', 'white')
+    
+    # FETCH variables from current_app here!
     analysis_results = analyze_game(
         data=data, 
         opening_book=current_app.opening_book, 
@@ -221,6 +219,7 @@ def player_card():
 def analyze_batch():
     data = request.get_json()
     
+    # FETCH variables from current_app here!
     batch_metrics = process_insights_batch(
         data=data, 
         opening_book=current_app.opening_book, 
