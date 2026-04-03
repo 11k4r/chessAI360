@@ -19,16 +19,13 @@ mimetypes.add_type('application/wasm', '.wasm')
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# 2. Grab the key directly from the Flask config we just loaded
-my_api_key = app.config.get('GROQ_API_KEY')
-client = Groq(api_key=my_api_key)
+# Update database URI for Railway (PostgreSQL) vs Local (SQLite)
+db_url = os.environ.get('DATABASE_URL', 'sqlite:///chess_dna.db')
+# SQLAlchemy 1.4+ requires 'postgresql://', but Railway sometimes provides 'postgres://'
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-opening_book = load_opening_books(app.config.get('OPENINGS'))
-
-evaluator = StaticChessEvaluator()
-
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chess_dna.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
