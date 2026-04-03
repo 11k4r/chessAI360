@@ -13,6 +13,11 @@ from helpers import load_opening_books
 from StaticChessEvaluator import StaticChessEvaluator
 from player_insights import process_insights_batch
 
+from game_analyzer import analyze_game
+from helpers import load_opening_books
+from StaticChessEvaluator import StaticChessEvaluator
+from player_insights import process_insights_batch
+
 mimetypes.add_type('application/wasm', '.wasm')
 
 # 1. Initialize Flask and load the Config file first
