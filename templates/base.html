@@ -111,16 +111,26 @@
                 
                 // --- SCRIPT RELOADING LOGIC ---
                 const scripts = main.querySelectorAll('script');
-                for (const oldScript of scripts) {
-                    const newScript = document.createElement('script');
-                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                    
-                    if (oldScript.src) {
-                        newScript.src = oldScript.src;
-                    } else {
-                        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-                    }
-                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                
+                // Process scripts sequentially using a for...of loop and await
+                for (const oldScript of Array.from(scripts)) {
+                    await new Promise((resolve) => {
+                        const newScript = document.createElement('script');
+                        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                        
+                        if (oldScript.src) {
+                            newScript.src = oldScript.src;
+                            // Wait for the external script to load before resolving
+                            newScript.onload = resolve;
+                            newScript.onerror = resolve; // Continue even if one fails
+                            oldScript.parentNode.replaceChild(newScript, oldScript);
+                        } else {
+                            newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                            oldScript.parentNode.replaceChild(newScript, oldScript);
+                            // Inline scripts execute instantly, so resolve immediately
+                            resolve();
+                        }
+                    });
                 }
                 // -----------------------------------------
 

@@ -269,7 +269,8 @@
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-
+    <script src="{{ url_for('static', filename='js/engine-analysis.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/insights-generator.js') }}"></script>
     <script>
         var SEARCH_DEPTH = 12; 
         var workerPool = [];
@@ -582,7 +583,8 @@
 
         window.addEventListener('resize', updateCarousel);
 
-        document.addEventListener('DOMContentLoaded', () => {
+        // Run initialization directly so it works with the custom router
+        (function initPlayerInsights() {
             // Build the metric elements cache on load (eliminates O(N^2) lag on syncs)
             document.querySelectorAll('.metric-row').forEach(row => {
                 const nameEl = row.querySelector('.metric-name');
@@ -607,7 +609,7 @@
                 const unameEl = document.getElementById('player-username');
                 if(unameEl) unameEl.innerText = lsUser;
             }
-        });
+        })();
 
         window.toggleOpeningNode = function(id, event) {
             if (event) event.stopPropagation(); 
@@ -942,7 +944,6 @@
             if (egListEl) egListEl.innerHTML = egHTML || '<div class="text-xs text-slate-500 text-center mt-4">No endgames reached yet...</div>';
         }
     </script>
-    <script src="{{ url_for('static', filename='js/engine-analysis.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/insights-generator.js') }}"></script>
+
 {% endif %}
 {% endblock %}

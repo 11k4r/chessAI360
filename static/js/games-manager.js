@@ -304,10 +304,12 @@ function resetBtn() {
     const btnText = document.getElementById('btn-text');
     const loader = document.getElementById('btn-loader');
     
+    if (!btn) return; 
+
     btn.disabled = false;
     btn.classList.remove('opacity-75');
-    btnText.innerText = "Find Games";
-    loader.classList.add('hidden');
+    if (btnText) btnText.innerText = "Find Games";
+    if (loader) loader.classList.add('hidden');
 }
 
 function toggleFilter(key) {

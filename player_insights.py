@@ -30,6 +30,16 @@ def determine_tc(pgn):
             
     return 'blitz'
 
+def get_elo_from_pgn(pgn_str, user_side):
+    """Extracts the player's ELO from the PGN string."""
+    import re
+    if not pgn_str: return 1500
+    tag = "WhiteElo" if user_side == "white" else "BlackElo"
+    match = re.search(rf'\[{tag}\s+"(\d+)"\]', pgn_str)
+    if match:
+        return int(match.group(1))
+    return 1500
+
 def process_insights_batch(data, opening_book, client, evaluator):
     """
     100% Server-Side Aggregation.
@@ -257,7 +267,27 @@ def process_insights_batch(data, opening_book, client, evaluator):
             med_fast_ratio = raw['fast_ratio']
             med_pawn_grabs = raw['pawn_grabs']
 
+            user_elos = []
+            for g in raw_games:
+                elo = get_elo_from_pgn(g.get('pgn', ''), g.get('user_side', 'white'))
+                if elo > 0: user_elos.append(elo)
+            
+            avg_elo = statistics.median(user_elos) if user_elos else 1500
+            current_stats['avg_elo'] = int(avg_elo) # Save it to track over time
+
+            elo_baseline = max(10, 35 + (avg_elo / 50.0)) # Added max(10) to prevent negative OVR for extreme edge cases
+            
+            # 3. Blended Normalization: 30% Engine Accuracy + 70% ELO Base
+            current_stats['normalized_metrics'] = {}
+            for key, raw_val in current_stats['metrics'].items():
+                norm_val = min(99, int((raw_val * 0.2) + (elo_baseline * 0.8)))
+                current_stats['normalized_metrics'][key] = norm_val
+
+            # Optional: Use normalized metrics for title generation instead of raw
+            meds = current_stats['normalized_metrics'] 
+            
             candidates = {}
+            
             if meds.get('ACC', 100) < 40: candidates['Blunder Master'] = 100 + (40 - meds.get('ACC'))
             if med_endgame_ply < 55: candidates['The Simplifier'] = 100 + (55 - med_endgame_ply)
             if med_fast_ratio >= 0.80: candidates['Speed Demon'] = 100 + ((med_fast_ratio - 0.80) * 100)

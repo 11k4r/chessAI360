@@ -124,6 +124,7 @@ function groupAndFormatGames(rawGames, username, platform) {
 // ==========================================
 // Profile & Ratings Fetcher
 // ==========================================
+
 async function fetchAndPaintProfile(username) {
     try {
         // 1. Fetch Basic Profile (Avatar, Title, Username)
@@ -131,10 +132,12 @@ async function fetchAndPaintProfile(username) {
         if (profileRes.ok) {
             const profile = await profileRes.json();
             
-            document.getElementById('player-username').innerText = profile.username || username;
+            const usernameEl = document.getElementById('player-username');
+            if (usernameEl) usernameEl.innerText = profile.username || username;
             
             if (profile.avatar) {
-                document.getElementById('player-img').src = profile.avatar;
+                const imgEl = document.getElementById('player-img');
+                if (imgEl) imgEl.src = profile.avatar;
             }
             if (profile.title) {
                 const badge = document.getElementById('title-badge');
@@ -144,7 +147,7 @@ async function fetchAndPaintProfile(username) {
                 }
             }
 			
-			if (profile.country) {
+            if (profile.country) {
                 // Extracts "us" from "https://api.chess.com/pub/country/us"
                 const countryCode = profile.country.split('/').pop().toLowerCase();
                 const flagImg = document.getElementById('country-flag');
@@ -163,9 +166,13 @@ async function fetchAndPaintProfile(username) {
             const blitzRating = stats.chess_blitz?.last?.rating || '?';
             const bulletRating = stats.chess_bullet?.last?.rating || '?';
 
-            document.getElementById('rating-rapid').innerText = rapidRating;
-            document.getElementById('rating-blitz').innerText = blitzRating;
-            document.getElementById('rating-bullet').innerText = bulletRating;
+            const rapidEl = document.getElementById('rating-rapid');
+            const blitzEl = document.getElementById('rating-blitz');
+            const bulletEl = document.getElementById('rating-bullet');
+
+            if (rapidEl) rapidEl.innerText = rapidRating;
+            if (blitzEl) blitzEl.innerText = blitzRating;
+            if (bulletEl) bulletEl.innerText = bulletRating;
         }
     } catch (e) {
         console.error("Failed to fetch profile info:", e);
