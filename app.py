@@ -52,6 +52,11 @@ class PlayerInsights(db.Model):
 with app.app_context():
     db.create_all()
 
+client = Groq(api_key=my_api_key)
+
+opening_book = load_opening_books(app.config.get('OPENINGS'))
+
+evaluator = StaticChessEvaluator()
 
 oauth = OAuth(app)
 google = oauth.register(
