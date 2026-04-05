@@ -107,7 +107,8 @@ function groupAndFormatGames(rawGames, username, platform) {
             pgn: pgn,
             result: result,
             user_side: userSide,
-            timestamp: timestamp
+            timestamp: timestamp,
+			platform: platform
         });
     });
 
@@ -125,55 +126,93 @@ function groupAndFormatGames(rawGames, username, platform) {
 // Profile & Ratings Fetcher
 // ==========================================
 
-async function fetchAndPaintProfile(username) {
+var userRatingsCache = window.userRatingsCache || {
+    chesscom: { rapid: 0, blitz: 0, bullet: 0 },
+    lichess: { rapid: 0, blitz: 0, bullet: 0 }
+};
+window.userRatingsCache = userRatingsCache;
+
+window.updateRatingDisplay = function(platformFilter) {
+    let rapid = 0, blitz = 0, bullet = 0;
+    let countRapid = 0, countBlitz = 0, countBullet = 0;
+
+    if (platformFilter === 'all' || platformFilter === 'chesscom') {
+        if (userRatingsCache.chesscom.rapid) { rapid += userRatingsCache.chesscom.rapid; countRapid++; }
+        if (userRatingsCache.chesscom.blitz) { blitz += userRatingsCache.chesscom.blitz; countBlitz++; }
+        if (userRatingsCache.chesscom.bullet) { bullet += userRatingsCache.chesscom.bullet; countBullet++; }
+    }
+    if (platformFilter === 'all' || platformFilter === 'lichess') {
+        if (userRatingsCache.lichess.rapid) { rapid += userRatingsCache.lichess.rapid; countRapid++; }
+        if (userRatingsCache.lichess.blitz) { blitz += userRatingsCache.lichess.blitz; countBlitz++; }
+        if (userRatingsCache.lichess.bullet) { bullet += userRatingsCache.lichess.bullet; countBullet++; }
+    }
+
+    const rapidEl = document.getElementById('rating-rapid');
+    const blitzEl = document.getElementById('rating-blitz');
+    const bulletEl = document.getElementById('rating-bullet');
+
+    if (rapidEl) rapidEl.innerText = countRapid > 0 ? Math.round(rapid / countRapid) : '?';
+    if (blitzEl) blitzEl.innerText = countBlitz > 0 ? Math.round(blitz / countBlitz) : '?';
+    if (bulletEl) bulletEl.innerText = countBullet > 0 ? Math.round(bullet / countBullet) : '?';
+};
+
+async function fetchAndPaintProfile(chesscomUser, lichessUser, platformFilter = 'all') {
     try {
-        // 1. Fetch Basic Profile (Avatar, Title, Username)
-        const profileRes = await fetch(`https://api.chess.com/pub/player/${username}`);
-        if (profileRes.ok) {
-            const profile = await profileRes.json();
-            
-            const usernameEl = document.getElementById('player-username');
-            if (usernameEl) usernameEl.innerText = profile.username || username;
-            
-            if (profile.avatar) {
-                const imgEl = document.getElementById('player-img');
-                if (imgEl) imgEl.src = profile.avatar;
-            }
-            if (profile.title) {
-                const badge = document.getElementById('title-badge');
-                if (badge) {
-                    badge.innerText = profile.title;
-                    badge.classList.remove('hidden');
+        // Fetch Chess.com Data
+        if (chesscomUser) {
+            const profileRes = await fetch(`https://api.chess.com/pub/player/${chesscomUser}`);
+            if (profileRes.ok) {
+                const profile = await profileRes.json();
+                
+                const usernameEl = document.getElementById('player-username');
+                if (usernameEl && platformFilter !== 'lichess') usernameEl.innerText = profile.username || chesscomUser;
+                
+                if (profile.avatar) {
+                    const imgEl = document.getElementById('player-img');
+                    if (imgEl && platformFilter !== 'lichess') imgEl.src = profile.avatar;
+                }
+                if (profile.title) {
+                    const badge = document.getElementById('title-badge');
+                    if (badge && platformFilter !== 'lichess') {
+                        badge.innerText = profile.title;
+                        badge.classList.remove('hidden');
+                    }
+                }
+                if (profile.country) {
+                    const countryCode = profile.country.split('/').pop().toLowerCase();
+                    const flagImg = document.getElementById('country-flag');
+                    if (flagImg && countryCode && platformFilter !== 'lichess') flagImg.src = `https://flagcdn.com/w40/${countryCode}.png`;
                 }
             }
-			
-            if (profile.country) {
-                // Extracts "us" from "https://api.chess.com/pub/country/us"
-                const countryCode = profile.country.split('/').pop().toLowerCase();
-                const flagImg = document.getElementById('country-flag');
-                if (flagImg && countryCode) {
-                    flagImg.src = `https://flagcdn.com/w40/${countryCode}.png`;
-                }
+
+            const statsRes = await fetch(`https://api.chess.com/pub/player/${chesscomUser}/stats`);
+            if (statsRes.ok) {
+                const stats = await statsRes.json();
+                userRatingsCache.chesscom.rapid = stats.chess_rapid?.last?.rating || 0;
+                userRatingsCache.chesscom.blitz = stats.chess_blitz?.last?.rating || 0;
+                userRatingsCache.chesscom.bullet = stats.chess_bullet?.last?.rating || 0;
             }
         }
 
-        // 2. Fetch Current Ratings
-        const statsRes = await fetch(`https://api.chess.com/pub/player/${username}/stats`);
-        if (statsRes.ok) {
-            const stats = await statsRes.json();
-            
-            const rapidRating = stats.chess_rapid?.last?.rating || '?';
-            const blitzRating = stats.chess_blitz?.last?.rating || '?';
-            const bulletRating = stats.chess_bullet?.last?.rating || '?';
-
-            const rapidEl = document.getElementById('rating-rapid');
-            const blitzEl = document.getElementById('rating-blitz');
-            const bulletEl = document.getElementById('rating-bullet');
-
-            if (rapidEl) rapidEl.innerText = rapidRating;
-            if (blitzEl) blitzEl.innerText = blitzRating;
-            if (bulletEl) bulletEl.innerText = bulletRating;
+        // Fetch Lichess Data
+        if (lichessUser) {
+            const lichessRes = await fetch(`https://lichess.org/api/user/${lichessUser}`);
+            if (lichessRes.ok) {
+                const profile = await lichessRes.json();
+                
+                // If only Lichess is provided/filtered, use its profile info
+                if ((!chesscomUser || platformFilter === 'lichess') && document.getElementById('player-username')) {
+                    document.getElementById('player-username').innerText = profile.username;
+                }
+                
+                userRatingsCache.lichess.rapid = profile.perfs?.rapid?.rating || 0;
+                userRatingsCache.lichess.blitz = profile.perfs?.blitz?.rating || 0;
+                userRatingsCache.lichess.bullet = profile.perfs?.bullet?.rating || 0;
+            }
         }
+
+        updateRatingDisplay(platformFilter);
+
     } catch (e) {
         console.error("Failed to fetch profile info:", e);
     }

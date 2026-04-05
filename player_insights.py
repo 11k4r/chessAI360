@@ -1,6 +1,7 @@
 import re
 import statistics
 import io
+import copy
 import chess
 import chess.pgn
 from game_analyzer import analyze_game
@@ -30,9 +31,9 @@ def determine_tc(pgn):
             
     return 'blitz'
 
+
 def get_elo_from_pgn(pgn_str, user_side):
     """Extracts the player's ELO from the PGN string."""
-    import re
     if not pgn_str: return 1500
     tag = "WhiteElo" if user_side == "white" else "BlackElo"
     match = re.search(rf'\[{tag}\s+"(\d+)"\]', pgn_str)
@@ -40,15 +41,12 @@ def get_elo_from_pgn(pgn_str, user_side):
         return int(match.group(1))
     return 1500
 
-def process_insights_batch(data, opening_book, client, evaluator):
+
+def update_single_stat_bucket(current_stats, raw_games, analyzed_games, opening_book, client, evaluator):
     """
-    100% Server-Side Aggregation.
+    100% Server-Side Aggregation for a single bucket (e.g. 'all', 'chesscom', 'lichess').
     Merges the incoming batch into the historical current_stats.
     """
-    raw_games = data.get('games', [])
-    analyzed_games = data.get('analyzed_games', [])
-    
-    current_stats = data.get('current_stats', {})
     if not current_stats:
         current_stats = {
             "totalGames": 0, "analyzedGamesCount": 0, "wins": 0,
@@ -262,7 +260,6 @@ def process_insights_batch(data, opening_book, client, evaluator):
             current_stats['raw_aggregates'] = raw
             current_stats['analyzedGamesCount'] = new_count
 
-            meds = current_stats['metrics']
             med_endgame_ply = raw['endgame_ply']
             med_fast_ratio = raw['fast_ratio']
             med_pawn_grabs = raw['pawn_grabs']
@@ -277,15 +274,13 @@ def process_insights_batch(data, opening_book, client, evaluator):
 
             elo_baseline = max(10, 35 + (avg_elo / 50.0)) # Added max(10) to prevent negative OVR for extreme edge cases
             
-            # 3. Blended Normalization: 30% Engine Accuracy + 70% ELO Base
+            # Blended Normalization: 30% Engine Accuracy + 70% ELO Base
             current_stats['normalized_metrics'] = {}
             for key, raw_val in current_stats['metrics'].items():
                 norm_val = min(99, int((raw_val * 0.2) + (elo_baseline * 0.8)))
                 current_stats['normalized_metrics'][key] = norm_val
 
-            # Optional: Use normalized metrics for title generation instead of raw
             meds = current_stats['normalized_metrics'] 
-            
             candidates = {}
             
             if meds.get('ACC', 100) < 40: candidates['Blunder Master'] = 100 + (40 - meds.get('ACC'))
@@ -301,5 +296,66 @@ def process_insights_batch(data, opening_book, client, evaluator):
 
             if candidates:
                 current_stats['playstyle_title'] = max(candidates, key=candidates.get)
+
+    return current_stats
+
+
+def process_insights_batch(data, opening_book, client, evaluator):
+    """
+    Main entry point. Routes games into appropriate platform buckets 
+    and updates the master stats dictionary.
+    """
+    raw_games = data.get('games', [])
+    analyzed_games = data.get('analyzed_games', [])
+    saved_stats = data.get('current_stats', {})
+
+    empty_stat = {
+        "totalGames": 0, "analyzedGamesCount": 0, "wins": 0,
+        "tcStats": { "bullet": {"w": 0, "l": 0, "d": 0, "streak": 0}, "blitz": {"w": 0, "l": 0, "d": 0, "streak": 0}, "rapid": {"w": 0, "l": 0, "d": 0, "streak": 0} },
+        "metrics": { "ACC": 0, "OPN": 0, "MID": 0, "END": 0, "TAC": 0, "CAL": 0, "STR": 0, "INT": 0, "ATK": 0, "DEF": 0, "TMG": 0, "RES": 0 },
+        "openings": {}, "endgames": {}, "galleryFens": [], "playstyle_title": "Balanced Player",
+        "raw_aggregates": {"endgame_ply": 100, "fast_ratio": 0.5, "pawn_grabs": 0}
+    }
+
+    # 1. Backwards Compatibility & Initialization
+    if not saved_stats or 'all' not in saved_stats:
+        migrated_all = saved_stats if saved_stats.get('totalGames') else copy.deepcopy(empty_stat)
+        current_stats = {
+            'all': migrated_all,
+            'chesscom': copy.deepcopy(empty_stat),
+            'lichess': copy.deepcopy(empty_stat)
+        }
+    else:
+        current_stats = saved_stats
+
+    # 2. Filter payload into buckets
+    games_dict = {
+        'all': {
+            'raw': raw_games, 
+            'analyzed': analyzed_games
+        },
+        'chesscom': {
+            'raw': [g for g in raw_games if g.get('platform') == 'chesscom'], 
+            'analyzed': [g for g in analyzed_games if g.get('platform') == 'chesscom']
+        },
+        'lichess': {
+            'raw': [g for g in raw_games if g.get('platform') == 'lichess'], 
+            'analyzed': [g for g in analyzed_games if g.get('platform') == 'lichess']
+        }
+    }
+
+    # 3. Process each bucket independently
+    for platform, p_data in games_dict.items():
+        if not p_data['raw'] and not p_data['analyzed']:
+            continue
+        
+        current_stats[platform] = update_single_stat_bucket(
+            current_stats[platform], 
+            p_data['raw'], 
+            p_data['analyzed'], 
+            opening_book, 
+            client, 
+            evaluator
+        )
 
     return current_stats

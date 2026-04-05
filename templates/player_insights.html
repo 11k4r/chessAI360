@@ -8,22 +8,30 @@
     {% if user_logged_in %}
     
         <div class="flex flex-col items-center justify-center mb-10">
-            {% if can_sync %}
-                <button id="btn-sync" onclick="syncNewGames()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-5 text-sm rounded-lg border border-purple-400 shadow-lg transition-all animate-pulse">
-                    <i class="fa-solid fa-sync mr-2"></i> Sync New Games
-                </button>
-            {% else %}
-                <button disabled class="bg-slate-800 text-slate-500 font-bold py-2 px-5 text-sm rounded-lg border border-slate-700 cursor-not-allowed opacity-80">
-                    <i class="fa-solid fa-clock mr-2"></i> Sync available in {{ time_until_sync }}
-                </button>
-            {% endif %}
-            
-            <div id="progress-container" class="hidden w-full max-w-xl mx-auto mt-4 bg-slate-900 rounded-full h-3 border border-slate-700 overflow-hidden relative shadow-inner">
-                <div id="progress-bar" class="bg-yellow-500 h-full transition-all duration-300 ease-out flex items-center justify-end pr-2" style="width: 0%;">
-                    <span id="progress-text" class="text-[8px] font-bold text-slate-900 absolute w-full text-center left-0">0 / 0 Games Analyzed</span>
-                </div>
-            </div>
-        </div>
+			<div class="flex items-center gap-4">
+				<select id="platform-filter" onchange="changePlatform(this.value)" class="bg-slate-800 text-slate-300 font-bold py-2 px-4 rounded-lg border border-slate-700 shadow-lg focus:outline-none focus:border-yellow-500 transition-all text-sm cursor-pointer">
+					<option value="all">All Platforms</option>
+					<option value="chesscom">Chess.com</option>
+					<option value="lichess">Lichess</option>
+				</select>
+
+				{% if can_sync %}
+					<button id="btn-sync" onclick="syncNewGames()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-5 text-sm rounded-lg border border-purple-400 shadow-lg transition-all animate-pulse">
+						<i class="fa-solid fa-sync mr-2"></i> Sync New Games
+					</button>
+				{% else %}
+					<button disabled class="bg-slate-800 text-slate-500 font-bold py-2 px-5 text-sm rounded-lg border border-slate-700 cursor-not-allowed opacity-80">
+						<i class="fa-solid fa-clock mr-2"></i> Sync available in {{ time_until_sync }}
+					</button>
+				{% endif %}
+			</div>
+			
+			<div id="progress-container" class="hidden w-full max-w-xl mx-auto mt-4 bg-slate-900 rounded-full h-3 border border-slate-700 overflow-hidden relative shadow-inner">
+				<div id="progress-bar" class="bg-yellow-500 h-full transition-all duration-300 ease-out flex items-center justify-end pr-2" style="width: 0%;">
+					<span id="progress-text" class="text-[8px] font-bold text-slate-900 absolute w-full text-center left-0">0 / 0 Games Analyzed</span>
+				</div>
+			</div>
+</div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             
@@ -273,17 +281,46 @@
     <script src="{{ url_for('static', filename='js/insights-generator.js') }}"></script>
     <script>
         var SEARCH_DEPTH = 12; 
-        var workerPool = [];
-        var metricEls = {}; 
+		var workerPool = [];
+		var metricEls = {}; 
 
-        var dbStats = {{ stats_data | tojson | safe }};
-        var runningStats = Object.keys(dbStats).length > 0 ? dbStats : {
-            totalGames: 0, analyzedGamesCount: 0, wins: 0,
-            tcStats: { bullet: {w:0, l:0, d:0, streak: 0}, blitz: {w:0, l:0, d:0, streak: 0}, rapid: {w:0, l:0, d:0, streak: 0} },
-            metrics: { ACC: 0, TAC: 0, CAL: 0, STR: 0, INT: 0, ATK: 0, TMG: 0, DEF: 0, RES: 0, OPN: 0, MID: 0, END: 0 },
-            openings: {}, endgames: {}, galleryFens: [], playstyle_title: "Balanced Player",
-            raw_aggregates: { endgame_ply: 100, fast_ratio: 0.5, pawn_grabs: 0 }
-        };
+		var dbStats = {{ stats_data | tojson | safe }};
+		var emptyStatBucket = {
+			totalGames: 0, analyzedGamesCount: 0, wins: 0,
+			tcStats: { bullet: {w:0, l:0, d:0, streak: 0}, blitz: {w:0, l:0, d:0, streak: 0}, rapid: {w:0, l:0, d:0, streak: 0} },
+			metrics: { ACC: 0, TAC: 0, CAL: 0, STR: 0, INT: 0, ATK: 0, TMG: 0, DEF: 0, RES: 0, OPN: 0, MID: 0, END: 0 },
+			openings: {}, endgames: {}, galleryFens: [], playstyle_title: "Balanced Player",
+			raw_aggregates: { endgame_ply: 100, fast_ratio: 0.5, pawn_grabs: 0 }
+		};
+
+		// Check if dbStats is already migrated to multi-platform format
+		var runningStats;
+		if (Object.keys(dbStats).length > 0 && dbStats.all) {
+			runningStats = dbStats;
+		} else if (Object.keys(dbStats).length > 0) {
+			// Migrate old dbStats structure into "all"
+			runningStats = {
+				all: dbStats,
+				chesscom: JSON.parse(JSON.stringify(emptyStatBucket)),
+				lichess: JSON.parse(JSON.stringify(emptyStatBucket))
+			};
+		} else {
+			// New User
+			runningStats = {
+				all: JSON.parse(JSON.stringify(emptyStatBucket)),
+				chesscom: JSON.parse(JSON.stringify(emptyStatBucket)),
+				lichess: JSON.parse(JSON.stringify(emptyStatBucket))
+			};
+		}
+
+		var currentPlatformFilter = 'all';
+
+		window.changePlatform = function(platform) {
+			currentPlatformFilter = platform;
+			updateStatsTable();
+			initCarousel();
+			updateRatingDisplay(platform); 
+		};
 
         // --- NEW BLUNDER VARS ---
         var blunderBoard = null;
@@ -483,8 +520,8 @@
         var totalSlideWidth = slideWidth + slideMargin;
 
         function initCarousel() {
-            var allFens = (runningStats.galleryFens && runningStats.galleryFens.length > 0) ? runningStats.galleryFens : [];
-            var items = [...allFens].sort(() => 0.5 - Math.random()).slice(0, 7); 
+            var allFens = (runningStats[currentPlatformFilter].galleryFens && runningStats[currentPlatformFilter].galleryFens.length > 0) ? runningStats[currentPlatformFilter].galleryFens : [];
+            var items = (runningStats[currentPlatformFilter].galleryFens && runningStats[currentPlatformFilter].galleryFens.length > 0) ? runningStats[currentPlatformFilter].galleryFens : [];
             
             var track = document.getElementById('gallery-track');
             if (!track) return;
@@ -596,19 +633,16 @@
                 }
             });
 
-            if (runningStats && runningStats.totalGames > 0) {
-                updateStatsTable(); 
-            }
+            if (runningStats && runningStats[currentPlatformFilter] && runningStats[currentPlatformFilter].totalGames > 0) {
+				updateStatsTable(); 
+			}
             initCarousel();
             
             const chesscomUser = "{{ db_user.chesscom_username if db_user else '' }}";
-            if (chesscomUser) {
-                fetchAndPaintProfile(chesscomUser);
-            } else {
-                const lsUser = "{{ db_user.lichess_username if db_user else 'PLAYER' }}";
-                const unameEl = document.getElementById('player-username');
-                if(unameEl) unameEl.innerText = lsUser;
-            }
+			const lichessUser = "{{ db_user.lichess_username if db_user else '' }}";
+
+			// Fetch the profile using the new multi-platform parameters
+			fetchAndPaintProfile(chesscomUser, lichessUser, currentPlatformFilter);
         })();
 
         window.toggleOpeningNode = function(id, event) {
@@ -770,7 +804,7 @@
 
             // 1. Update W/L/D Table
             tcs.forEach(tc => {
-                const s = runningStats.tcStats[tc] || {w:0, l:0, d:0, streak:0};
+                const s = runningStats[currentPlatformFilter].tcStats[tc] || {w:0, l:0, d:0, streak:0};
                 totW += s.w || 0; 
                 totL += s.l || 0; 
                 totD += s.d || 0;
@@ -807,8 +841,8 @@
             let activeMetricsCount = 0;
             let ovrSum = 0;
 
-            for (const key in runningStats.metrics) {
-                const val = runningStats.metrics[key];
+            for (const key in runningStats[currentPlatformFilter].metrics) {
+                const val = runningStats[currentPlatformFilter].metrics[key];
                 const cachedEl = metricEls[key];
                 
                 if (cachedEl) {
@@ -831,9 +865,9 @@
             if (isSyncing) return; 
 
             // 3. Update Title directly from Server
-            if (runningStats.playstyle_title) {
+            if (runningStats[currentPlatformFilter].playstyle_title) {
                 const titleEl = document.getElementById('player-description');
-                if (titleEl) titleEl.innerText = runningStats.playstyle_title;
+                if (titleEl) titleEl.innerText = runningStats[currentPlatformFilter].playstyle_title;
             }
 
             // 4. Update N-Level Hierarchical Openings UI
@@ -917,11 +951,11 @@
             if (opListEl) {
                 const headerSpan = opListEl.parentElement.querySelector('span');
                 if (headerSpan) headerSpan.innerText = "Opening Explorer";
-                opListEl.innerHTML = renderOpeningTree(runningStats.openings, 0, '') || '<div class="text-xs text-slate-500 text-center mt-4">No data yet...</div>';
+                opListEl.innerHTML = renderOpeningTree(runningStats[currentPlatformFilter].openings, 0, '') || '<div class="text-xs text-slate-500 text-center mt-4">No data yet...</div>';
             }
 
             // 5. Update Endgames UI
-            const egArray = Object.entries(runningStats.endgames || {}).map(([name, s]) => ({name, ...s, total: s.w+s.l+s.d}));
+            const egArray = Object.entries(runningStats[currentPlatformFilter].endgames || {}).map(([name, s]) => ({name, ...s, total: s.w+s.l+s.d}));
             egArray.sort((a,b) => b.total - a.total);
             
             const egHTML = egArray.map(eg => {

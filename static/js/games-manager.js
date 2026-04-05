@@ -450,15 +450,11 @@ async function selectGame(game) {
     }
 }
 
-// Scroll Listener Initialization
-document.addEventListener('DOMContentLoaded', () => {
-    const container = document.getElementById('games-container');
-    if (container) {
-        container.addEventListener('scroll', function() {
-            const { scrollTop, scrollHeight, clientHeight } = this;
-            if (scrollTop + clientHeight >= scrollHeight - 50) {
-                renderNextBatch();
-            }
-        });
+// Scroll handler for the games container
+function handleGamesScroll(element) {
+    const { scrollTop, scrollHeight, clientHeight } = element;
+    // Trigger when within 50px of the bottom
+    if (scrollTop + clientHeight >= scrollHeight - 50) {
+        renderNextBatch();
     }
-});
+}
