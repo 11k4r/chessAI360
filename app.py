@@ -7,6 +7,7 @@ import mimetypes
 from groq import Groq
 from authlib.integrations.flask_client import OAuth 
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from game_analyzer import analyze_game
 from helpers import load_opening_books
@@ -19,6 +20,8 @@ mimetypes.add_type('application/wasm', '.wasm')
 app = Flask(__name__)
 app.config.from_object(Config)
 
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
 # 2. Grab the key directly from the Flask config we just loaded
 my_api_key = app.config.get('GROQ_API_KEY')
 client = Groq(api_key=my_api_key)
@@ -28,8 +31,16 @@ opening_book = load_opening_books(app.config.get('OPENINGS'))
 evaluator = StaticChessEvaluator()
 
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chess_dna.db'
+# Fetch Database URL from environment (provided by Railway), fallback to SQLite locally
+db_url = os.environ.get('DATABASE_URL', 'sqlite:///chess_dna.db')
+
+# SQLAlchemy requires 'postgresql://' but Railway sometimes provides 'postgres://'
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 db = SQLAlchemy(app)
 
 # Define the User Table
