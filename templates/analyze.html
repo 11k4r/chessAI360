@@ -535,6 +535,7 @@
     var board = null;
     var gameHistory = []; 
     var sanHistory = []; 
+	var moveSquares = [];
     var currentMoveIndex = 0;
 
     var workerPool = [];
@@ -651,15 +652,15 @@
         }
     }
 
-    // Returns to the manual search menu
     function resetView(clearInput = false) {
-        document.getElementById('dashboard-view').classList.add('hidden');
-        document.getElementById('games-list-view').classList.add('hidden');
-        document.getElementById('import-view').classList.remove('hidden');
-        document.getElementById('main-header').classList.remove('hidden');
+        document.getElementById('dashboard-view')?.classList.add('hidden');
+        document.getElementById('games-list-view')?.classList.add('hidden');
+        document.getElementById('import-view')?.classList.remove('hidden');
+        document.getElementById('main-header')?.classList.remove('hidden');
         
         if (clearInput) {
-            document.getElementById('username-input').value = '';
+            const input = document.getElementById('username-input');
+            if (input) input.value = '';
         }
     }
 	

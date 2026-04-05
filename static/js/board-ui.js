@@ -26,6 +26,7 @@ function initChessBoard(pgn) {
     
     gameHistory = [];
     sanHistory = []; 
+    moveSquares = [""];
     
     const replay = new Chess();
     gameHistory.push(replay.fen()); 
@@ -44,8 +45,9 @@ function initChessBoard(pgn) {
             : `${moveNumber}... ${m.san}`;
             
         sanHistory.push(label);
+        moveSquares.push(m.to); 
     });
-    
+        
     currentMoveIndex = 0; 
 
     if (board) board.destroy();
@@ -68,8 +70,10 @@ function updateBoard() {
     const fenBox = document.getElementById('fen-box');
     if(fenBox) fenBox.value = fullFen; 
 
+    $('.move-classification-badge').remove();
+
     // 2. Update player clocks and names
-    updatePlayerInfo(); 
+    updatePlayerInfo();
 
     // 3. Update the analysis metrics
     if (currentAnalysisData && currentAnalysisData.position_metrics) {
@@ -105,6 +109,11 @@ function updateBoard() {
             const classEl = document.getElementById('stat-class');
             classEl.className = 'text-sm font-bold truncate w-full text-white'; // Reset to default
             const cls = metrics.move_classification;
+			
+			const destSquare = moveSquares[currentMoveIndex];
+            if (destSquare && cls) {
+                drawClassificationBadge(destSquare, cls);
+            }
             
             if (['Brilliant', 'Great'].includes(cls)) classEl.classList.add('text-cyan-400');
             else if (cls === 'Best') classEl.classList.add('text-green-400');
@@ -902,5 +911,50 @@ function switchAnalysisTab(tab, isManual = false) {
         
         // Ensure game data is loaded when tab is opened
         updateExpandedGameMetrics();
+    }
+}
+
+
+function drawClassificationBadge(square, classification) {
+    let badgeText = '';
+    let bgColor = '';
+
+    // Map classifications to standard chess symbols and Tailwind colors
+    switch (classification) {
+        case 'Brilliant':
+            badgeText = '!!'; bgColor = 'bg-cyan-500'; break;
+        case 'Great':
+            badgeText = '!'; bgColor = 'bg-blue-500'; break;
+        case 'Best':
+            badgeText = '★'; bgColor = 'bg-green-500'; break;
+        case 'Excellent':
+            badgeText = '✓'; bgColor = 'bg-green-400'; break;
+        case 'Good':
+            badgeText = '✓'; bgColor = 'bg-green-300'; break; 
+        case 'Inaccuracy':
+            badgeText = '?!'; bgColor = 'bg-yellow-400'; break;
+        case 'Mistake':
+            badgeText = '?'; bgColor = 'bg-orange-400'; break;
+        case 'Blunder':
+            badgeText = '??'; bgColor = 'bg-red-500'; break;
+        case 'Missed Win':
+            badgeText = '-+'; bgColor = 'bg-red-400'; break;
+        default:
+            return; // Don't draw for Normal/Book moves
+    }
+
+    // chessboard.js uses classes like .square-e4
+    const squareEl = document.querySelector(`.square-${square}`);
+    
+    if (squareEl) {
+        // Ensure the square acts as an anchor for absolute positioning
+        squareEl.style.position = 'relative';
+
+        const badge = document.createElement('div');
+        // Tailwind classes: position it top-right, circular, centered text, shadow
+        badge.className = `move-classification-badge absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-white font-extrabold text-[10px] shadow-lg border-2 border-slate-800 z-50 ${bgColor}`;
+        badge.innerHTML = badgeText;
+
+        squareEl.appendChild(badge);
     }
 }

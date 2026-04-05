@@ -66,10 +66,10 @@ async function fetchGames(directUsername = null, forceRefresh = false) {
         archiveIndex = cache.archiveIndex;
         currentUserCache = cache.currentUserCache;
         
-        // Swap UI instantly
-        document.getElementById('import-view').classList.add('hidden');
-        document.getElementById('games-list-view').classList.remove('hidden');
-        document.getElementById('main-header').classList.add('hidden');
+        // Swap UI instantly (Safely)
+        document.getElementById('import-view')?.classList.add('hidden');
+        document.getElementById('games-list-view')?.classList.remove('hidden');
+        document.getElementById('main-header')?.classList.add('hidden');
         
         // Render from memory and exit function
         refreshGameList();
@@ -91,13 +91,17 @@ async function fetchGames(directUsername = null, forceRefresh = false) {
     currentUserCache = username;
     isLoading = false;
 
-    // UI Loading State
-    btn.disabled = true;
-    btn.classList.add('opacity-75');
-    btnText.innerText = "Searching...";
-    loader.classList.remove('hidden');
-    errorDiv.classList.add('hidden');
-    document.getElementById('games-container').innerHTML = ''; 
+    // UI Loading State (Safely)
+    if (btn) {
+        btn.disabled = true;
+        btn.classList.add('opacity-75');
+    }
+    if (btnText) btnText.innerText = "Searching...";
+    if (loader) loader.classList.remove('hidden');
+    if (errorDiv) errorDiv.classList.add('hidden');
+    
+    const gamesContainer = document.getElementById('games-container');
+    if (gamesContainer) gamesContainer.innerHTML = ''; 
 
     try {
         if (currentPlatform === 'chesscom') {
@@ -162,20 +166,25 @@ async function fetchGames(directUsername = null, forceRefresh = false) {
         }
         // --------------------------------
 
-        document.getElementById('import-view').classList.add('hidden');
-        document.getElementById('games-list-view').classList.remove('hidden');
-        document.getElementById('main-header').classList.add('hidden'); 
+        // Safely manipulate UI elements
+        document.getElementById('import-view')?.classList.add('hidden');
+        document.getElementById('games-list-view')?.classList.remove('hidden');
+        document.getElementById('main-header')?.classList.add('hidden'); 
         
         renderNextBatch();
 
     } catch (err) {
-        errorDiv.innerText = err.message;
-        errorDiv.classList.remove('hidden');
+        // Safely show error
+        if (errorDiv) {
+            errorDiv.innerText = err.message;
+            errorDiv.classList.remove('hidden');
+        }
         
-        document.getElementById('dashboard-view').classList.add('hidden');
-        document.getElementById('games-list-view').classList.add('hidden');
-        document.getElementById('import-view').classList.remove('hidden');
-        document.getElementById('main-header').classList.remove('hidden');
+        // Safely manipulate UI elements
+        document.getElementById('dashboard-view')?.classList.add('hidden');
+        document.getElementById('games-list-view')?.classList.add('hidden');
+        document.getElementById('import-view')?.classList.remove('hidden');
+        document.getElementById('main-header')?.classList.remove('hidden');
         
     } finally {
         resetBtn();
@@ -211,20 +220,25 @@ async function renderNextBatch() {
     const loader = document.getElementById('scroll-loader');
     const container = document.getElementById('games-container');
     
-    loader.classList.remove('hidden');
+    // Safely remove hidden class if loader exists
+    loader?.classList.remove('hidden');
 
     if (currentOffset + BATCH_SIZE >= allGamesCache.length) {
         await fetchNextMonth();
     }
 
     setTimeout(() => {
-		const currentContainer = document.getElementById('games-container');
+        // Re-fetch elements in case the user navigated away during the timeout or fetchNextMonth
+        const currentContainer = document.getElementById('games-container');
+        const currentLoader = document.getElementById('scroll-loader');
+        
         if (!currentContainer) {
             isLoading = false;
             return;
         }
+        
         if (currentOffset >= allGamesCache.length) {
-            loader.classList.add('hidden');
+            currentLoader?.classList.add('hidden');
             isLoading = false;
             return;
         }
@@ -233,10 +247,11 @@ async function renderNextBatch() {
         appendGamesToDOM(batch);
         currentOffset += BATCH_SIZE;
         
-        loader.classList.add('hidden');
+        currentLoader?.classList.add('hidden');
         isLoading = false;
 
-        if (container.scrollHeight <= container.clientHeight && currentOffset < allGamesCache.length) {
+        // Use currentContainer to safely check scroll height
+        if (currentContainer.scrollHeight <= currentContainer.clientHeight && currentOffset < allGamesCache.length) {
             renderNextBatch();
         }
         
@@ -360,7 +375,7 @@ function handleClick(index) {
 async function selectGame(game) {
     const pgn = game.pgn;
 	
-	if (!pgn) {
+    if (!pgn) {
         alert("Sorry, no PGN data was found for this game.");
         return;
     }
@@ -370,16 +385,18 @@ async function selectGame(game) {
     const userSide = isBlack ? 'black' : 'white';
 
     const tcBox = document.getElementById('time-control-box');
-    tcBox.innerText = game.time_class;
-    const timeColorClass = TIME_STYLES[game.time_class] || 'text-slate-400';
-    tcBox.className = `flex items-center justify-center px-4 rounded-md bg-slate-800 border border-slate-700 font-bold text-xs uppercase tracking-wider ${timeColorClass}`;
+    if (tcBox) {
+        tcBox.innerText = game.time_class;
+        const timeColorClass = TIME_STYLES[game.time_class] || 'text-slate-400';
+        tcBox.className = `flex items-center justify-center px-4 rounded-md bg-slate-800 border border-slate-700 font-bold text-xs uppercase tracking-wider ${timeColorClass}`;
+    }
     
-    document.getElementById('games-list-view').classList.add('hidden');
-    document.getElementById('import-view').classList.add('hidden');
-    document.getElementById('dashboard-view').classList.remove('hidden');
+    document.getElementById('games-list-view')?.classList.add('hidden');
+    document.getElementById('import-view')?.classList.add('hidden');
+    document.getElementById('dashboard-view')?.classList.remove('hidden');
 
     initChessBoard(pgn); 
-    board.orientation(userSide);
+    if (board) board.orientation(userSide);
     updatePlayerInfo();  
     
     const loader = document.getElementById('analysis-loader');
@@ -414,7 +431,7 @@ async function selectGame(game) {
         const payload = {
             pgn: pgn,
             analysis: analysisData,
-			user_side: userSide
+            user_side: userSide
         };
 
         const response = await fetch('/api/analyze-game', {
@@ -427,6 +444,12 @@ async function selectGame(game) {
 
         currentAnalysisData = finalGameData; 
         
+        // --- SAFETY CHECK: Did the user navigate away during the await? ---
+        const canvasExists = document.getElementById('evalChart');
+        if (!canvasExists) {
+            return; // Abort silently if the UI is gone
+        }
+        
         if (currentAnalysisData && currentAnalysisData.position_metrics) {
             initEvalChart(currentAnalysisData.position_metrics);
             updateBoard(); 
@@ -434,19 +457,22 @@ async function selectGame(game) {
 
         if (loader) {
             loader.classList.add('opacity-0');
-            setTimeout(() => loader.classList.add('hidden'), 500); 
+            setTimeout(() => loader?.classList.add('hidden'), 500); 
         }
         if (content) {
             setTimeout(() => {
-                content.classList.remove('opacity-0');
-                content.classList.add('opacity-100');
+                content?.classList.remove('opacity-0');
+                content?.classList.add('opacity-100');
             }, 300);
         }
 
     } catch (e) {
         console.error("Analysis Failed:", e);
-        alert("Error: " + e.message);
-        resetView();
+        // Only show alert and reset if they haven't navigated away
+        if (document.getElementById('dashboard-view')) {
+            alert("Error: " + e.message);
+            resetView();
+        }
     }
 }
 
