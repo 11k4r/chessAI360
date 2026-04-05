@@ -200,7 +200,7 @@ def player_card():
 
     if insights and insights.last_updated:
         stats_data = insights.stats_data
-        cooldown = datetime.timedelta(seconds=1) 
+        cooldown = datetime.timedelta(days=1) 
         next_sync = insights.last_updated + cooldown
         now = datetime.datetime.utcnow()
         
