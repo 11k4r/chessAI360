@@ -34,9 +34,11 @@ evaluator = StaticChessEvaluator()
 # Fetch Database URL from environment (provided by Railway), fallback to SQLite locally
 db_url = os.environ.get('DATABASE_URL', 'sqlite:///chess_dna.db')
 
-# SQLAlchemy requires 'postgresql://' but Railway sometimes provides 'postgres://'
+# Force SQLAlchemy to use the pure-Python pg8000 driver
 if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
+    db_url = db_url.replace("postgres://", "postgresql+pg8000://", 1)
+elif db_url.startswith("postgresql://") and "pg8000" not in db_url:
+    db_url = db_url.replace("postgresql://", "postgresql+pg8000://", 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
