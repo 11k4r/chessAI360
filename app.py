@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session, current_app
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from config import Config 
 import json     
 import datetime 
@@ -7,7 +7,6 @@ import mimetypes
 from groq import Groq
 from authlib.integrations.flask_client import OAuth 
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.middleware.proxy_fix import ProxyFix
 
 from game_analyzer import analyze_game
 from helpers import load_opening_books
@@ -20,17 +19,18 @@ mimetypes.add_type('application/wasm', '.wasm')
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# Update database URI for Railway (PostgreSQL) vs Local (SQLite)
-db_url = os.environ.get('DATABASE_URL', 'sqlite:///chess_dna.db')
-# SQLAlchemy 1.4+ requires 'postgresql://', but Railway sometimes provides 'postgres://'
-if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
+# 2. Grab the key directly from the Flask config we just loaded
+my_api_key = app.config.get('GROQ_API_KEY')
+client = Groq(api_key=my_api_key)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+opening_book = load_opening_books(app.config.get('OPENINGS'))
+
+evaluator = StaticChessEvaluator()
+
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chess_dna.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # Define the User Table
 class User(db.Model):
@@ -53,19 +53,6 @@ class PlayerInsights(db.Model):
 with app.app_context():
     db.create_all()
 
-# ---------------------------------------------------------
-# ATTACH RESOURCES DIRECTLY TO THE APP OBJECT
-# This prevents Gunicorn workers from losing track of globals
-# ---------------------------------------------------------
-
-# Retrieve the API key from environment variables safely
-my_api_key = os.environ.get('GROQ_API_KEY', 'your_fallback_key_here')
-
-app.groq_client = Groq(api_key=my_api_key)
-app.opening_book = load_opening_books(app.config.get('OPENINGS', 'openings'))
-app.evaluator = StaticChessEvaluator()
-
-# ---------------------------------------------------------
 
 oauth = OAuth(app)
 google = oauth.register(
@@ -113,6 +100,7 @@ def logout():
     session.pop('user', None)
     session.pop('user_id', None)
     return redirect('/')
+# -----------------------
 
 # --- UPDATED PROFILE ROUTE ---
 @app.route('/profile', methods=['GET', 'POST'])
@@ -136,12 +124,15 @@ def profile():
     return render_template('profile.html', site_name=app.config['SITE_NAME'], db_user=user)
 
 
+
 @app.route('/')
 def index():
     return render_template('index.html', 
                            site_name=app.config['SITE_NAME'], # Accessed via app.config
                            tagline="Push Chess Forward",
                            sub_tagline="Go beyond the evaluation bar and decode your chess DNA. Use AI to measure key metrics such as harmony, mobility, pawn structure, and time management. Seamlessly sync with Chess.com and Lichess to transform your game history into a comprehensive player profile.")
+
+
 
     
 @app.route('/analyze')
@@ -161,7 +152,7 @@ def analyze():
 def process_analysis_data():
     data = request.get_json()
     
-    # 1. Save the JSON data locally
+    # 1. Save the JSON data locally (same behavior as before)
     os.makedirs('data', exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"data/analysis_{timestamp}.json"
@@ -170,15 +161,7 @@ def process_analysis_data():
     #     json.dump(data, f, indent=4)
 
     user_side = data.get('user_side', 'white')
-    
-    # Call to analyze_game using the resources safely anchored to current_app
-    analysis_results = analyze_game(
-        data=data, 
-        opening_book=current_app.opening_book, 
-        client=current_app.groq_client, 
-        user_side=user_side, 
-        evaluator=current_app.evaluator
-    )
+    analysis_results = analyze_game(data, opening_book, client, user_side, evaluator=evaluator)
     
     return jsonify(analysis_results)
 
@@ -188,20 +171,10 @@ def manual():
 
 @app.route('/player_insights')
 def player_card():
-    # 1. Check if they have a session cookie at all
     if 'user_id' not in session:
         return render_template('player_insights.html', user_logged_in=False)
         
-    # 2. Look up the user in the database
     user = User.query.get(session['user_id'])
-    
-    # 3. SAFETY CHECK: If session exists but user is missing from DB (stale session)
-    if not user:
-        session.pop('user', None)
-        session.pop('user_id', None)
-        return redirect('/login')
-
-    # 4. Now it is safe to access user.id
     insights = PlayerInsights.query.filter_by(user_id=user.id).first()
     
     can_sync = True
@@ -227,19 +200,19 @@ def player_card():
                            can_sync=can_sync,
                            time_until_sync=time_until_sync,
                            stats_data=stats_data or {},
-                           db_user=user)
+                           db_user=user) # <-- ADD THIS LINE
+
 
 
 @app.route('/api/analyze-batch', methods=['POST'])
 def analyze_batch():
     data = request.get_json()
     
-    # Call to process_insights_batch using the resources safely anchored to current_app
     batch_metrics = process_insights_batch(
         data=data, 
-        opening_book=current_app.opening_book, 
-        client=current_app.groq_client, 
-        evaluator=current_app.evaluator
+        opening_book=opening_book, 
+        client=client, 
+        evaluator=evaluator
     )
     
     return jsonify(batch_metrics)
