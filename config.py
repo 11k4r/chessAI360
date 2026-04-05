@@ -2,11 +2,14 @@ import os
 
 class Config:
     # Basic App Settings
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-key-for-chessai360'
-    GOOGLE_CLIENT_ID = '42685457896-87g81dkvhmdh8ger6d5df66jo37lrmh9.apps.googleusercontent.com'
-    GOOGLE_CLIENT_SECRET = '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'
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-key-for-chessai360')
+    
+    # Securely fetch credentials from environment variables
+    GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+    GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+    GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
+    
     SITE_NAME = "chessAI 360"
-    GROQ_API_KEY = "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"
     
     # Analysis Settings
     Thinking_Time = 10.0  # Seconds for static server-side analysis
