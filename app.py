@@ -45,8 +45,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Define the User Table
 class User(db.Model):
+    __tablename__ = 'users' # <-- Add this line
     id = db.Column(db.Integer, primary_key=True)
     google_id = db.Column(db.String(120), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -56,7 +56,7 @@ class User(db.Model):
 
 class PlayerInsights(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False) 
     last_updated = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     latest_chesscom_timestamp = db.Column(db.BigInteger, default=0)
     latest_lichess_timestamp = db.Column(db.BigInteger, default=0)
@@ -64,7 +64,11 @@ class PlayerInsights(db.Model):
 
 # Create the database tables automatically before the first request
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+    except Exception as e:
+        # Ignore race conditions where multiple workers try to create tables simultaneously
+        print(f"Skipping db creation: {e}")
 
 
 oauth = OAuth(app)
