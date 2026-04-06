@@ -8,11 +8,29 @@ from groq import Groq
 from authlib.integrations.flask_client import OAuth 
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.middleware.proxy_fix import ProxyFix
+import requests
 
 from game_analyzer import analyze_game
 from helpers import load_opening_books
 from StaticChessEvaluator import StaticChessEvaluator
 from player_insights import process_insights_batch
+
+
+@app.route('/api/chesscom/profile/<username>')
+def get_chesscom_profile(username):
+    # Chess.com requires a valid User-Agent identifying your application
+    headers = {
+        'User-Agent': 'ChessAI360 App - Railway Hosted (your-email@example.com)'
+    }
+    
+    try:
+        url = f"https://api.chess.com/pub/player/{username}"
+        response = requests.get(url, headers=headers)
+        
+        # Return the JSON back to your frontend
+        return jsonify(response.json()), response.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 mimetypes.add_type('application/wasm', '.wasm')
 
