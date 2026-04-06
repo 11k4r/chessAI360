@@ -16,22 +16,6 @@ from StaticChessEvaluator import StaticChessEvaluator
 from player_insights import process_insights_batch
 
 
-@app.route('/api/chesscom/profile/<username>')
-def get_chesscom_profile(username):
-    # Chess.com requires a valid User-Agent identifying your application
-    headers = {
-        'User-Agent': 'ChessAI360 App - Railway Hosted (your-email@example.com)'
-    }
-    
-    try:
-        url = f"https://api.chess.com/pub/player/{username}"
-        response = requests.get(url, headers=headers)
-        
-        # Return the JSON back to your frontend
-        return jsonify(response.json()), response.status_code
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 mimetypes.add_type('application/wasm', '.wasm')
 
 # 1. Initialize Flask and load the Config file first
@@ -99,6 +83,23 @@ google = oauth.register(
         'scope': 'openid email profile'
     }
 )
+
+@app.route('/api/chesscom/profile/<username>')
+def get_chesscom_profile(username):
+    # Chess.com requires a valid User-Agent identifying your application
+    headers = {
+        'User-Agent': 'ChessAI360 App - Railway Hosted (your-email@example.com)'
+    }
+    
+    try:
+        url = f"https://api.chess.com/pub/player/{username}"
+        response = requests.get(url, headers=headers)
+        
+        # Return the JSON back to your frontend
+        return jsonify(response.json()), response.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route('/login')
 def login():
