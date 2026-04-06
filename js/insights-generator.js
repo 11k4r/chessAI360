@@ -128,7 +128,7 @@ function groupAndFormatGames(rawGames, username, platform) {
 async function fetchAndPaintProfile(username) {
     try {
         // 1. Fetch Basic Profile (Avatar, Title, Username)
-        const profileRes = await fetch(`https://api.chess.com/pub/player/${username}`);
+		const profileRes = await fetch(`/api/chesscom/profile/${chesscomUser}`); 
         if (profileRes.ok) {
             const profile = await profileRes.json();
             
