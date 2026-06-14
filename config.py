@@ -1,25 +1,79 @@
-import os
+"""
+config.py
+─────────
+All configuration for the ChessCoach model.
+Two dataclasses: MaiaConfig (mirrors Cfg79m as a proper dataclass)
+and ChessCoachConfig (top-level settings).
+"""
 
-class Config:
-    # Basic App Settings
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-key-for-chessai360')
-    
-    # Securely fetch credentials from environment variables
-    GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
-    GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
-    GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
-    
-    SITE_NAME = "chessAI 360"
-    
-    # Analysis Settings
-    Thinking_Time = 10.0  # Seconds for static server-side analysis
-    Threads = 2         
-    TIME_CONTROL_STYLES = {
-        'bullet': 'text-purple-400',    # Purple (Chaotic/Fast)
-        'blitz': 'text-yellow-400',     # Yellow (Electric/Lightning)
-        'rapid': 'text-blue-400',       # Blue (Calm/Thinking)
-        'daily': 'text-cyan-400',       # Cyan (Slow)
-        'classical': 'text-cyan-400'
-    }
+from __future__ import annotations
+from dataclasses import dataclass, field
 
-    OPENINGS = 'openings'
+
+@dataclass
+class MaiaConfig:
+    """
+    Configuration for the frozen Maia-3 79M backbone.
+    Mirrors the notebook's Cfg79m exactly so MAIA3Model accepts it directly.
+    """
+    checkpoint_path:     str   = "maia3-79/maia3-79m.pt"
+    history:             int   = 8
+    dim_vit:             int   = 1024
+    dim_emb:             int   = 128
+    num_blocks:          int   = 8
+    num_heads:           int   = 32
+    head_hid_dim:        int   = 1024
+    mlp_ratio:           float = 2.0
+    dropout:             float = 0.0
+    use_gab:             bool  = True
+    gab_gen_size:        int   = 128
+    gab_per_square_dim:  int   = 32
+    gab_intermediate_dim: int  = 128
+    use_relative_bias:   bool  = False
+    use_absolute_pe:     bool  = False
+    activation:          str   = "gelu"
+    use_rms_norm:        bool  = True
+    omit_qkv_biases:     bool  = True
+    include_time_info:   bool  = False
+    device:              str   = "cpu"
+
+
+@dataclass
+class ChessCoachConfig:
+    """Top-level configuration for the full ChessCoach model."""
+
+    # ── Sub-configs ────────────────────────────────────────────────────────
+    maia: MaiaConfig = field(default_factory=MaiaConfig)
+
+    # ── Qwen backbone ──────────────────────────────────────────────────────
+    qwen_path:  str = "Qwen3"
+    qwen_dim:   int = 4096          # Qwen3-8B hidden dim
+
+    # ── Projection ─────────────────────────────────────────────────────────
+    maia_dim:   int = 1024          # dim_vit of Maia
+    elo_dim:    int = 128           # dim_emb of Maia
+
+    # ── Behaviour ──────────────────────────────────────────────────────────
+    freeze_maia:         bool = True
+    max_candidate_moves: int  = 8
+
+    # ── Special token used as visual placeholder in prompts ────────────────
+    vis_token: str = "<vis>"
+
+    # ── System prompt ──────────────────────────────────────────────────────
+    system_prompt: str = (
+        "You are an expert chess coach. "
+        "You receive the board position encoded as visual tokens alongside "
+        "position evaluation, move complexity, player ratings, board dynamics, "
+        "and a ranked list of candidate moves. "
+        "Provide clear, insightful analysis and coaching advice tailored to "
+        "the player's skill level. Think step-by-step before giving your answer."
+    )
+
+    # ── Inference ──────────────────────────────────────────────────────────
+    enable_thinking: bool  = True   # Qwen3 native CoT (<think> blocks)
+    strip_thinking:  bool  = False  # If True, remove <think> from returned text
+    max_new_tokens:  int   = 1024
+    temperature:     float = 0.7
+    top_p:           float = 0.9
+    do_sample:       bool  = True
